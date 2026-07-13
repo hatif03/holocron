@@ -59,6 +59,7 @@ export default async function WorkCanvasPage({
       initialWork={{
         title: data.work.title,
         description: data.work.description,
+        isTemplate: data.work.is_template,
       }}
       initialGraph={{ nodes, edges }}
     />

@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
-  Controls,
   MiniMap,
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Connection,
   type Node,
   type Edge,
@@ -22,14 +22,20 @@ import {
   type NodeType,
   type GeneratePaperConfig,
 } from "@holocron/shared";
-import { Save, Plus, FileText } from "lucide-react";
+import { Save } from "lucide-react";
 import { nodeTypes } from "./nodes";
 import { GraphSidebar, AddNodeMenu } from "./sidebar";
-import { Button, Dialog, Input, Switch } from "@/components/ui";
+import { NodeInspector } from "./inspector";
+import { CanvasToolbar } from "./toolbar";
+import { Button, Dialog, Input, Switch, Badge } from "@/components/ui";
+import {
+  useCanvasStore,
+  registerUpdateNodeData,
+} from "@/lib/canvas-store";
 
 interface CanvasEditorProps {
   workId: string;
-  initialWork: { title: string; description: string };
+  initialWork: { title: string; description: string; isTemplate?: boolean };
   initialGraph: { nodes: Node[]; edges: Edge[] };
 }
 
@@ -38,7 +44,6 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
   const [sidebarTab, setSidebarTab] = useState("Nodes");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const [genModalOpen, setGenModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<GeneratePaperConfig>({
     styleGuide: "Nature",
@@ -47,15 +52,79 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
     enableReviewLoop: true,
     maxReviewIterations: 3,
     pauseForFeedback: false,
+    compilePdf: true,
   });
+
+  const {
+    selectedNodeId,
+    setSelectedNodeId,
+    setWorkId,
+    genModalOpen,
+    setGenModalOpen,
+    nodesLocked,
+    pushHistory,
+    setLastSavedAt,
+  } = useCanvasStore();
+
+  const { fitView, getZoom, zoomIn, zoomOut } = useReactFlow();
   const nodeCount = useRef(initialGraph.nodes.length);
+  const historyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    setWorkId(workId);
+    if (!initialized.current) {
+      pushHistory({ nodes: initialGraph.nodes, edges: initialGraph.edges });
+      initialized.current = true;
+    }
+  }, [workId, setWorkId, pushHistory, initialGraph.nodes, initialGraph.edges]);
+
+  const scheduleHistory = useCallback(
+    (nds: Node[], eds: Edge[]) => {
+      if (historyTimer.current) clearTimeout(historyTimer.current);
+      historyTimer.current = setTimeout(() => {
+        pushHistory({ nodes: nds, edges: eds });
+      }, 500);
+    },
+    [pushHistory]
+  );
+
+  const updateNodeDataFn = useCallback(
+    (nodeId: string, patch: Record<string, unknown>) => {
+      setNodes((nds) => {
+        const next = nds.map((n) =>
+          n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n
+        );
+        scheduleHistory(next, edges);
+        return next;
+      });
+    },
+    [setNodes, edges, scheduleHistory]
+  );
+
+  useEffect(() => {
+    registerUpdateNodeData(updateNodeDataFn);
+  }, [updateNodeDataFn]);
+
+  const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
   const onConnect = useCallback(
-    (connection: Connection) =>
-      setEdges((eds) =>
-        addEdge({ ...connection, id: uuidv4() }, eds)
-      ),
-    [setEdges]
+    (connection: Connection) => {
+      setEdges((eds) => {
+        const next = addEdge(
+          {
+            ...connection,
+            id: uuidv4(),
+            type: "smoothstep",
+            style: { stroke: "#3b82f6", strokeWidth: 2 },
+          },
+          eds
+        );
+        pushHistory({ nodes, edges: next });
+        return next;
+      });
+    },
+    [setEdges, nodes, pushHistory]
   );
 
   const addNode = (type: NodeType) => {
@@ -71,7 +140,16 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
         ...getDefaultNodeData(type),
       },
     };
-    setNodes((nds) => [...nds, newNode]);
+    setNodes((nds) => {
+      const next = [...nds, newNode];
+      pushHistory({ nodes: next, edges });
+      return next;
+    });
+  };
+
+  const selectNode = (nodeId: string) => {
+    setSelectedNodeId(nodeId);
+    fitView({ nodes: [{ id: nodeId }], duration: 300, padding: 0.5 });
   };
 
   const save = async () => {
@@ -99,6 +177,7 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
         graph,
       }),
     });
+    setLastSavedAt(new Date().toISOString());
     setSaving(false);
   };
 
@@ -130,11 +209,29 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
     }
   };
 
+  const onRestoreSnapshot = (snapshot: { nodes: Node[]; edges: Edge[] }) => {
+    setNodes(snapshot.nodes);
+    setEdges(snapshot.edges);
+  };
+
+  const wrappedOnNodesChange = useCallback(
+    (changes: Parameters<typeof onNodesChange>[0]) => {
+      onNodesChange(changes);
+      if (changes.some((c) => c.type === "position" && c.dragging === false)) {
+        scheduleHistory(nodes, edges);
+      }
+    },
+    [onNodesChange, scheduleHistory, nodes, edges]
+  );
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div>
-          <h1 className="font-serif text-xl font-bold">{initialWork.title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-serif text-xl font-bold">{initialWork.title}</h1>
+            {initialWork.isTemplate && <Badge variant="template">TEMPLATE</Badge>}
+          </div>
           <p className="text-sm text-muted-foreground">{initialWork.description}</p>
         </div>
         <Button onClick={save} disabled={saving} className="gap-2">
@@ -146,45 +243,72 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
       <div className="flex flex-1 min-h-0">
         <GraphSidebar
           nodes={nodes}
+          edges={edges}
           activeTab={sidebarTab}
           onTabChange={setSidebarTab}
           workTitle={initialWork.title}
           workDescription={initialWork.description}
+          isTemplate={initialWork.isTemplate}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={selectNode}
         />
 
-        <div className="flex-1 relative">
+        <div className="flex-1 relative flex flex-col min-w-0">
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
+            onNodesChange={wrappedOnNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             nodeTypes={nodeTypes}
+            nodesDraggable={!nodesLocked}
+            nodesConnectable={!nodesLocked}
+            elementsSelectable={!nodesLocked}
+            onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+            onPaneClick={() => setSelectedNodeId(null)}
+            defaultEdgeOptions={{
+              type: "smoothstep",
+              animated: false,
+              style: { stroke: "#3b82f6", strokeWidth: 2 },
+            }}
             fitView
-            className="bg-muted/30"
+            className="bg-muted/30 flex-1"
           >
             <Background gap={16} size={1} />
-            <Controls />
-            <MiniMap />
+            <MiniMap className="!bottom-16" />
           </ReactFlow>
+
+          {nodes.length === 0 && (
+            <div className="absolute inset-0 flex items-end justify-center pb-24 pointer-events-none">
+              <p className="text-sm text-muted-foreground bg-card/80 px-4 py-2 rounded-lg border border-border">
+                Welcome to the Research Canvas.
+              </p>
+            </div>
+          )}
+
+          <CanvasToolbar
+            zoom={Math.round(getZoom() * 100)}
+            onZoomIn={() => zoomIn({ duration: 200 })}
+            onZoomOut={() => zoomOut({ duration: 200 })}
+            onFitView={() => fitView({ duration: 300, padding: 0.2 })}
+            onAddNode={() => setAddMenuOpen(true)}
+            onGenerate={() => setGenModalOpen(true)}
+            onRestoreSnapshot={onRestoreSnapshot}
+          />
 
           <AddNodeMenu
             open={addMenuOpen}
             onClose={() => setAddMenuOpen(false)}
             onAdd={addNode}
           />
-
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2 shadow-lg">
-            <Button size="sm" variant="outline" onClick={() => setAddMenuOpen(true)} className="gap-1">
-              <Plus className="h-4 w-4" />
-              Add Node
-            </Button>
-            <Button size="sm" onClick={() => setGenModalOpen(true)} className="gap-1">
-              <FileText className="h-4 w-4" />
-              Generate Paper
-            </Button>
-          </div>
         </div>
+
+        {selectedNode && (
+          <NodeInspector
+            node={selectedNode}
+            onClose={() => setSelectedNodeId(null)}
+          />
+        )}
       </div>
 
       <Dialog open={genModalOpen} onClose={() => setGenModalOpen(false)} title="Generate Paper from Canvas">
@@ -202,7 +326,9 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
               <option value="IEEE">IEEE</option>
               <option value="ICML">ICML</option>
             </select>
-            <p className="text-xs text-muted-foreground mt-1">Target journal / conference format.</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Target journal / conference format.
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium">Target Pages</label>
@@ -235,7 +361,16 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
                 setConfig({ ...config, maxReviewIterations: parseInt(e.target.value) || 3 })
               }
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Number of review rounds before finalizing.
+            </p>
           </div>
+          <Switch
+            label="Compile PDF"
+            description="Run LaTeX compilation after generation."
+            checked={config.compilePdf}
+            onChange={(v) => setConfig({ ...config, compilePdf: v })}
+          />
           <Switch
             label="Pause for Feedback"
             description="Pause after review for your input."

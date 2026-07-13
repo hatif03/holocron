@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Settings, KeyRound, Save, Sparkles } from "lucide-react";
-import { Button, Card, Input, Select, Badge } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 interface LlmConfig {
   provider: string;
@@ -178,7 +181,8 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">Provider</span>
-            <Select
+            <select
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               value={provider}
               onChange={(e) => onProviderChange(e.target.value)}
             >
@@ -187,7 +191,7 @@ export default function SettingsPage() {
                   {PROVIDER_LABELS[p] || p}
                 </option>
               ))}
-            </Select>
+            </select>
           </label>
 
           <label className="block space-y-1.5">

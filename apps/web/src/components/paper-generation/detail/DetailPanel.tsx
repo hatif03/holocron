@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Card } from "@/components/ui/card";
 import type { LogEvent } from "./LogEntry";
 
 interface DetailPanelProps {

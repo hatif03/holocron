@@ -13,7 +13,7 @@ import {
   Plus,
   FileText,
 } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/lib/canvas-store";
 import type { Node, Edge } from "@xyflow/react";

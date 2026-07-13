@@ -6,7 +6,8 @@ import type {
   ReferenceAnalysis,
   ReferenceDraft,
 } from "@holocron/shared";
-import { Dialog, Button } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { SimpleDialog } from "@/components/ui/simple-dialog";
 import { Stepper } from "./Stepper";
 import { FindPaperStep } from "./FindPaperStep";
 import { ReviewAnalyzeStep } from "./ReviewAnalyzeStep";
@@ -87,7 +88,7 @@ export function AddReferenceModal({
 
   return (
     <>
-      <Dialog
+      <SimpleDialog
         open={open}
         onClose={handleClose}
         title={editRef ? "Edit Reference" : "Add New Reference"}
@@ -128,7 +129,7 @@ export function AddReferenceModal({
             )}
           </div>
         </div>
-      </Dialog>
+      </SimpleDialog>
 
       <BibTeXImportDialog
         open={bibtexOpen}

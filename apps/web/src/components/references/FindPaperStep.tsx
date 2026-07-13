@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import type { PaperSearchField, PaperSearchResult, PaperSearchSource } from "@holocron/shared";
-import { Button, Input } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SearchResultRow } from "./SearchResultRow";
 
 interface FindPaperStepProps {

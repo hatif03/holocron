@@ -17,7 +17,7 @@ import {
   updateNodeData,
   type NodeStatus,
 } from "@/lib/canvas-store";
-import { Button } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 
 const NODE_COLORS: Record<string, string> = {
   start: "border-violet-400/40 bg-violet-500/10",

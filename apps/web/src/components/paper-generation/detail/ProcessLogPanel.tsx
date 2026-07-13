@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, CheckCircle2, Loader2 } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Card } from "@/components/ui/card";
 import { LogEntry, type LogEvent } from "./LogEntry";
 
 export type { LogEvent };

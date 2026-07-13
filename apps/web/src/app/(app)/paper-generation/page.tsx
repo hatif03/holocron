@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Box, Plus, Search } from "lucide-react";
-import { Button, Input } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { GenerationCard, type GenerationItem } from "@/components/paper-generation/GenerationCard";
 import { MetadataWizard } from "@/components/paper-generation/MetadataWizard";
 

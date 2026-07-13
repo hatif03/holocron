@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, FileText } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export interface FileNode {

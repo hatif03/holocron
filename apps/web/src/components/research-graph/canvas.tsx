@@ -27,7 +27,11 @@ import { nodeTypes } from "./nodes";
 import { GraphSidebar, AddNodeMenu } from "./sidebar";
 import { NodeInspector } from "./inspector";
 import { CanvasToolbar } from "./toolbar";
-import { Button, Dialog, Input, Switch, Badge } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SimpleDialog } from "@/components/ui/simple-dialog";
+import { LabeledSwitch } from "@/components/ui/labeled-switch";
 import {
   useCanvasStore,
   registerUpdateNodeData,
@@ -311,7 +315,7 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
         )}
       </div>
 
-      <Dialog open={genModalOpen} onClose={() => setGenModalOpen(false)} title="Generate Paper from Canvas">
+      <SimpleDialog open={genModalOpen} onClose={() => setGenModalOpen(false)} title="Generate Paper from Canvas">
         <div className="space-y-3">
           <div>
             <label className="text-sm font-medium">Style Guide</label>
@@ -340,13 +344,13 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
               }
             />
           </div>
-          <Switch
+          <LabeledSwitch
             label="Enable Planning"
             description="AI plans paper structure before writing."
             checked={config.enablePlanning}
             onChange={(v) => setConfig({ ...config, enablePlanning: v })}
           />
-          <Switch
+          <LabeledSwitch
             label="Enable Review Loop"
             description="Multi-round style/logic/structure review."
             checked={config.enableReviewLoop}
@@ -365,13 +369,13 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
               Number of review rounds before finalizing.
             </p>
           </div>
-          <Switch
+          <LabeledSwitch
             label="Compile PDF"
             description="Run LaTeX compilation after generation."
             checked={config.compilePdf}
             onChange={(v) => setConfig({ ...config, compilePdf: v })}
           />
-          <Switch
+          <LabeledSwitch
             label="Pause for Feedback"
             description="Pause after review for your input."
             checked={config.pauseForFeedback}
@@ -384,7 +388,7 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
             <Button onClick={generatePaper}>Generate Paper</Button>
           </div>
         </div>
-      </Dialog>
+      </SimpleDialog>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Network, FileCheck, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   return (

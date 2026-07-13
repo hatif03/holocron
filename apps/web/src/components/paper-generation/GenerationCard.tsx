@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { Trash2, FileText } from "lucide-react";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
 
 export interface GenerationItem {

@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Network, Plus, Search } from "lucide-react";
-import { Button, Card, Badge, Dialog, Input, Textarea } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { SimpleDialog } from "@/components/ui/simple-dialog";
 import { formatDate } from "@/lib/utils";
 
 interface Work {
@@ -115,7 +120,7 @@ export default function ResearchGraphPage() {
         </div>
       )}
 
-      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} title="Create New Research Work">
+      <SimpleDialog open={modalOpen} onClose={() => setModalOpen(false)} title="Create New Research Work">
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium">
@@ -146,7 +151,7 @@ export default function ResearchGraphPage() {
             </Button>
           </div>
         </div>
-      </Dialog>
+      </SimpleDialog>
     </div>
   );
 }

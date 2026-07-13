@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, Button, Textarea } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { SimpleDialog } from "@/components/ui/simple-dialog";
 
 interface BibTeXImportDialogProps {
   open: boolean;
@@ -38,7 +40,7 @@ export function BibTeXImportDialog({ open, onClose, onImport }: BibTeXImportDial
   };
 
   return (
-    <Dialog open={open} onClose={onClose} title="Import BibTeX">
+    <SimpleDialog open={open} onClose={onClose} title="Import BibTeX">
       <Textarea
         value={bibtex}
         onChange={(e) => setBibtex(e.target.value)}
@@ -55,6 +57,6 @@ export function BibTeXImportDialog({ open, onClose, onImport }: BibTeXImportDial
           Import
         </Button>
       </div>
-    </Dialog>
+    </SimpleDialog>
   );
 }

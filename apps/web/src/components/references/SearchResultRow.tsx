@@ -1,7 +1,7 @@
 "use client";
 
 import type { PaperSearchResult } from "@holocron/shared";
-import { Badge } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface SearchResultRowProps {

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ArrowLeft, Download, ExternalLink } from "lucide-react";
-import { Badge, Button } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface GenerationHeaderProps {
   gen: Record<string, unknown>;

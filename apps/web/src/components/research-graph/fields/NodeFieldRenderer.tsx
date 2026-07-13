@@ -5,7 +5,8 @@ import {
   type NodeFieldSpec,
   type NodeType,
 } from "@holocron/shared";
-import { Input, Textarea } from "@/components/ui";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { TypedFieldLabel } from "./TypedFieldLabel";
 import { FileDropzone } from "./FileDropzone";
 import { FigurePreview } from "./FigurePreview";

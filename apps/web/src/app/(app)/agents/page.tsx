@@ -1,6 +1,7 @@
 import { AGENTS } from "@holocron/shared";
 import { fetchAgentsHealth } from "@/lib/agents-client";
-import { Card, Badge } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Bot, Radio, Clock } from "lucide-react";
 
 export default async function AgentsPage() {

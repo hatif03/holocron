@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import type { ReferenceAnalysis, ReferenceDraft } from "@holocron/shared";
-import { Button, Input, Textarea } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { AnalysisPanel } from "./AnalysisPanel";
 
 interface ReviewAnalyzeStepProps {

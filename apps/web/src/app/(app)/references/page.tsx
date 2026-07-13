@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { BookOpen, Plus, Search } from "lucide-react";
-import { Button, Input } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ReferenceCard, type ReferenceItem } from "@/components/references/ReferenceCard";
 import { AddReferenceModal } from "@/components/references/AddReferenceModal";
 

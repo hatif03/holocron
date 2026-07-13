@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReferenceAnalysis } from "@holocron/shared";
-import { Badge } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
 
 interface AnalysisPanelProps {
   analysis: ReferenceAnalysis | null;

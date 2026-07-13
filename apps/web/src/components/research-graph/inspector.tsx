@@ -13,7 +13,7 @@ import { X, FileText } from "lucide-react";
 import { NodeFieldRenderer } from "./fields/NodeFieldRenderer";
 import { FigurePreview } from "./fields/FigurePreview";
 import { useCanvasStore, updateNodeData, type NodeStatus } from "@/lib/canvas-store";
-import { Button } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 
 const STATUS_LABELS: Record<NodeStatus, string> = {
   none: "None",

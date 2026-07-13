@@ -3,7 +3,11 @@
 import { useRef, useState } from "react";
 import type { GeneratePaperConfig, MetadataPaperDraft } from "@holocron/shared";
 import { metadataWizardSteps } from "@holocron/shared";
-import { Dialog, Button, Input, Textarea, Switch } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { SimpleDialog } from "@/components/ui/simple-dialog";
+import { LabeledSwitch } from "@/components/ui/labeled-switch";
 import { WizardStepper } from "./WizardStepper";
 import { useRouter } from "next/navigation";
 
@@ -86,7 +90,7 @@ export function MetadataWizard({ open, onClose }: MetadataWizardProps) {
   if (!open) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} title="Generate Paper from Metadata">
+    <SimpleDialog open={open} onClose={onClose} title="Generate Paper from Metadata">
       <div className="flex justify-end -mt-2 mb-2">
         <Button size="sm" variant="outline" onClick={importJson}>
           Import JSON
@@ -174,17 +178,17 @@ export function MetadataWizard({ open, onClose }: MetadataWizardProps) {
               }
             />
           </div>
-          <Switch
+          <LabeledSwitch
             label="Enable Planning"
             checked={config.enablePlanning}
             onChange={(v) => setConfig({ ...config, enablePlanning: v })}
           />
-          <Switch
+          <LabeledSwitch
             label="Enable Review Loop"
             checked={config.enableReviewLoop}
             onChange={(v) => setConfig({ ...config, enableReviewLoop: v })}
           />
-          <Switch
+          <LabeledSwitch
             label="Compile PDF"
             checked={config.compilePdf}
             onChange={(v) => setConfig({ ...config, compilePdf: v })}
@@ -221,6 +225,6 @@ export function MetadataWizard({ open, onClose }: MetadataWizardProps) {
           )}
         </div>
       </div>
-    </Dialog>
+    </SimpleDialog>
   );
 }

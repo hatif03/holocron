@@ -1,6 +1,8 @@
 "use client";
 
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export interface ReferenceItem {
   id: string;

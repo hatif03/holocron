@@ -57,3 +57,9 @@ def compile_latex(req: CompileRequest):
         pdf_path=str(pdf) if pdf.exists() else None,
         log="\n".join(log_parts),
     )
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8080)

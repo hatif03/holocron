@@ -9,4 +9,4 @@ COPY compile_server.py .
 RUN pip3 install --break-system-packages fastapi uvicorn
 
 EXPOSE 8080
-CMD ["python3", "compile_server.py"]
+CMD ["uvicorn", "compile_server:app", "--host", "0.0.0.0", "--port", "8080"]

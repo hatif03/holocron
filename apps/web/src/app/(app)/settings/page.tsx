@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { Settings, KeyRound, Save, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/layout/page-header";
 
 interface LlmConfig {
   provider: string;
@@ -142,30 +143,26 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
-      <div className="flex items-center gap-3 mb-8">
-        <Settings className="h-6 w-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Settings
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            LLM provider and API keys
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="LLM provider and API keys"
+        icon={Settings}
+      />
 
-      <Card className="p-6 space-y-5">
-        <div className="flex items-start gap-3">
-          <KeyRound className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-          <div>
-            <h2 className="font-semibold">LLM Provider</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Keys stay on your machine. Holocron never requires a cloud account.
-              K2 Think is the default for demos.
-            </p>
+      <Card>
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-3">
+            <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div>
+              <CardTitle>LLM Provider</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Keys stay on your machine. Holocron never requires a cloud account.
+                K2 Think is the default for demos.
+              </p>
+            </div>
           </div>
-        </div>
-
+        </CardHeader>
+        <CardContent className="space-y-5 pt-6">
         {config && (
           <div className="flex flex-wrap gap-2">
             <Badge variant={config.mock_llm ? "warning" : "success"}>
@@ -240,6 +237,7 @@ export default function SettingsPage() {
           <Save className="h-4 w-4" />
           {saving ? "Saving…" : "Save"}
         </Button>
+        </CardContent>
       </Card>
 
       <p className="mt-6 text-xs text-muted-foreground">

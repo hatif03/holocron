@@ -2,6 +2,7 @@ import { AGENTS } from "@holocron/shared";
 import { fetchAgentsHealth } from "@/lib/agents-client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { Bot, Radio, Clock } from "lucide-react";
 
 export default async function AgentsPage() {
@@ -22,20 +23,12 @@ export default async function AgentsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <Bot className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Agents
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Service status
-            </p>
-          </div>
-        </div>
-        <Badge variant="success">● Agent Service is online and running</Badge>
-      </div>
+      <PageHeader
+        title="Agents"
+        description="Service status"
+        icon={Bot}
+        actions={<Badge variant="success">● Agent Service is online and running</Badge>}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {agents.map((agent) => (

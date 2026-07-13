@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GenerationCard, type GenerationItem } from "@/components/paper-generation/GenerationCard";
 import { MetadataWizard } from "@/components/paper-generation/MetadataWizard";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function PaperGenerationListPage() {
   const [generations, setGenerations] = useState<GenerationItem[]>([]);
@@ -35,36 +36,30 @@ export default function PaperGenerationListPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Box className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Paper Generation
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Multi-agent paper pipeline
-            </p>
-          </div>
+      <PageHeader
+        title="Paper Generation"
+        description="Multi-agent paper pipeline"
+        icon={Box}
+        actions={
+          <Button onClick={() => setWizardOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Paper
+          </Button>
+        }
+      >
+        <div className="flex max-w-xl gap-2">
+          <Input
+            placeholder="Search tasks..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && load(search)}
+            className="flex-1"
+          />
+          <Button variant="outline" onClick={() => load(search)}>
+            <Search className="h-4 w-4" />
+          </Button>
         </div>
-        <Button onClick={() => setWizardOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Paper
-        </Button>
-      </div>
-
-      <div className="flex gap-2 mb-6">
-        <Input
-          placeholder="Search tasks..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && load(search)}
-          className="flex-1"
-        />
-        <Button variant="outline" onClick={() => load(search)}>
-          <Search className="h-4 w-4" />
-        </Button>
-      </div>
+      </PageHeader>
 
       <div className="grid gap-4">
         {generations.map((gen) => (

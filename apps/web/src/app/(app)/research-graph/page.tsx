@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
+import { PageHeader } from "@/components/layout/page-header";
 import { formatDate } from "@/lib/utils";
 
 interface Work {
@@ -62,21 +63,19 @@ export default function ResearchGraphPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="flex items-center gap-3 mb-8">
-        <Network className="h-6 w-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Research Graph
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Visual map of your research
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <PageHeader
+        title="Research Graph"
+        description="Visual map of your research"
+        icon={Network}
+        actions={
+          <Button onClick={() => setModalOpen(true)} className="gap-2 shrink-0">
+            <Plus className="h-4 w-4" />
+            New Work
+          </Button>
+        }
+      >
+        <div className="relative max-w-xl">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-10"
             placeholder="Search works..."
@@ -85,11 +84,7 @@ export default function ResearchGraphPage() {
             onKeyDown={(e) => e.key === "Enter" && load(search)}
           />
         </div>
-        <Button onClick={() => setModalOpen(true)} className="gap-2 shrink-0">
-          <Plus className="h-4 w-4" />
-          New Work
-        </Button>
-      </div>
+      </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {works.map((work) => (

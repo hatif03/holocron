@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ReferenceCard, type ReferenceItem } from "@/components/references/ReferenceCard";
 import { AddReferenceModal } from "@/components/references/AddReferenceModal";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function ReferencesPage() {
   const [refs, setRefs] = useState<ReferenceItem[]>([]);
@@ -36,42 +37,36 @@ export default function ReferencesPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <BookOpen className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              References
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Papers and BibTeX library
-            </p>
-          </div>
+      <PageHeader
+        title="References"
+        description="Papers and BibTeX library"
+        icon={BookOpen}
+        actions={
+          <Button
+            onClick={() => {
+              setEditRef(null);
+              setAddOpen(true);
+            }}
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Reference
+          </Button>
+        }
+      >
+        <div className="flex max-w-xl gap-2">
+          <Input
+            placeholder="Search references..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="flex-1"
+          />
+          <Button onClick={handleSearch} variant="outline" className="gap-1">
+            <Search className="h-4 w-4" />
+          </Button>
         </div>
-        <Button
-          onClick={() => {
-            setEditRef(null);
-            setAddOpen(true);
-          }}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Add Reference
-        </Button>
-      </div>
-
-      <div className="flex gap-2 mb-6">
-        <Input
-          placeholder="Search references..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          className="flex-1"
-        />
-        <Button onClick={handleSearch} variant="outline" className="gap-1">
-          <Search className="h-4 w-4" />
-        </Button>
-      </div>
+      </PageHeader>
 
       <div className="space-y-3">
         {refs.map((ref) => (

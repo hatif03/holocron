@@ -268,7 +268,7 @@ def _build_main_tex(title: str, style: str, sections: list[str]) -> str:
         "\\usepackage{amsmath}",
         "\\usepackage{hyperref}",
         "\\title{" + title.replace("_", "\\_") + "}",
-        "\\author{AcademicHub Generated}",
+        "\\author{Holocron Generated}",
         "\\begin{document}",
         "\\maketitle",
     ]

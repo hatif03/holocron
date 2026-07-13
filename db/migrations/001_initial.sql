@@ -1,4 +1,4 @@
--- Holocron / AcademicHub initial schema
+-- Holocron initial schema
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 

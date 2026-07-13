@@ -34,7 +34,7 @@ export function GenerationHeader({ gen, genId, onCancel }: GenerationHeaderProps
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="min-w-0">
-          <h1 className="font-serif text-xl font-bold leading-tight">
+          <h1 className="font-display text-xl font-bold leading-tight text-accent-yellow tracking-wide">
             {(gen.title as string) || "Paper Generation"}
           </h1>
           <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">

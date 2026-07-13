@@ -15,7 +15,7 @@ export async function stopCommand() {
     composeFile = path.join(getRepoRoot(), "docker", "docker-compose.yml");
   }
 
-  console.log(chalk.bold("\nStopping AcademicHub...\n"));
+  console.log(chalk.bold("\nStopping Holocron...\n"));
   runDockerCompose(composeFile, ["down"], getEnvPath());
   console.log(chalk.green("Services stopped.\n"));
 }

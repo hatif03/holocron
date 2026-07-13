@@ -24,7 +24,14 @@ export default async function AgentsPage() {
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <Bot className="h-6 w-6 text-primary" />
-          <h1 className="font-serif text-2xl font-bold">Agents</h1>
+          <div>
+            <h1 className="font-display text-2xl font-bold text-accent-yellow tracking-wide uppercase">
+              Agents
+            </h1>
+            <p className="text-xs text-accent-cyan tracking-wider uppercase mt-0.5">
+              Crew status
+            </p>
+          </div>
         </div>
         <Badge variant="success">● Agent Service is online and running</Badge>
       </div>

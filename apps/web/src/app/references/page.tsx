@@ -38,7 +38,14 @@ export default function ReferencesPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <BookOpen className="h-6 w-6 text-primary" />
-          <h1 className="font-serif text-2xl font-bold">References</h1>
+          <div>
+            <h1 className="font-display text-2xl font-bold text-accent-yellow tracking-wide uppercase">
+              References
+            </h1>
+            <p className="text-xs text-accent-cyan tracking-wider uppercase mt-0.5">
+              The Archives
+            </p>
+          </div>
         </div>
         <Button
           onClick={() => {

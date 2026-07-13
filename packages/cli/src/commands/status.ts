@@ -1,7 +1,7 @@
 import chalk from "chalk";
 
 export async function statusCommand() {
-  console.log(chalk.bold("\nAcademicHub Status\n"));
+  console.log(chalk.bold("\nHolocron Status\n"));
 
   const services = [
     { name: "Web", url: "http://localhost:3000/health" },

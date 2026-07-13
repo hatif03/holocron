@@ -37,7 +37,14 @@ export default function PaperGenerationListPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Box className="h-6 w-6 text-primary" />
-          <h1 className="font-serif text-2xl font-bold">Paper Generation</h1>
+          <div>
+            <h1 className="font-display text-2xl font-bold text-accent-yellow tracking-wide uppercase">
+              Paper Generation
+            </h1>
+            <p className="text-xs text-accent-cyan tracking-wider uppercase mt-0.5">
+              Command the writing crew
+            </p>
+          </div>
         </div>
         <Button onClick={() => setWizardOpen(true)} className="gap-2">
           <Plus className="h-4 w-4" />

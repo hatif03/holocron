@@ -10,7 +10,7 @@ const program = new Command();
 
 program
   .name("holocron")
-  .description("AcademicHub — AI-native research platform")
+  .description("Holocron — AI-native research platform")
   .version("0.1.0");
 
 program

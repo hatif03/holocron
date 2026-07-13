@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://registry.npmjs.org
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build --workspace=@holocron/shared
+          npm run build --workspace=holocron
+          npm run build --workspace=web
+        env:
+          DATABASE_URL: postgresql://holocron:holocron@localhost:5432/holocron
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker images
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          docker build -t ghcr.io/hatif03/holocron-web:$VERSION -f apps/web/Dockerfile .
+          docker build -t ghcr.io/hatif03/holocron-agents:$VERSION -f apps/agents/Dockerfile apps/agents
+          docker build -t ghcr.io/hatif03/holocron-latex:$VERSION -f docker/latex/Dockerfile docker/latex
+          docker push ghcr.io/hatif03/holocron-web:$VERSION
+          docker push ghcr.io/hatif03/holocron-agents:$VERSION
+          docker push ghcr.io/hatif03/holocron-latex:$VERSION
+
+      - name: Publish npm package
+        run: npm publish --workspace=holocron --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

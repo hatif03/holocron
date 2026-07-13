@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@holocron/shared
+
+      - name: Build CLI
+        run: npm run build --workspace=holocron
+
+      - name: Lint web
+        run: npm run lint --workspace=web
+
+      - name: Build web
+        run: npm run build --workspace=web
+        env:
+          DATABASE_URL: postgresql://holocron:holocron@localhost:5432/holocron
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate agents imports
+        run: |
+          pip install -r apps/agents/requirements.txt
+          python -c "from src.main import app; print(app.title)"
+
+        working-directory: apps/agents

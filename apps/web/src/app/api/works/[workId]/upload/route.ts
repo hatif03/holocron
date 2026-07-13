@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getDb } from "@/lib/db";
+import { ingestReferencePdf } from "@/lib/supermemory-client";
 
 function sanitizeFilename(raw: string): string {
   const safeName = path.basename(raw);
@@ -43,6 +44,9 @@ export async function POST(
 
     const buffer = Buffer.from(await file.arrayBuffer());
     fs.writeFileSync(dest, buffer);
+
+    // Supermemory: file ingestion — work-scoped PDF search (docs/SUPERMEMORY.md)
+    await ingestReferencePdf(dest, workId);
 
     const relPath = `works/${workId}/${safeName}`;
     const url = `/api/works/files?path=${encodeURIComponent(relPath)}`;

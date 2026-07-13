@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { ingestReferencePdf } from "@/lib/supermemory-client";
 
 function sanitizeFilename(raw: string): string {
   const safeName = path.basename(raw);
@@ -32,6 +33,12 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     fs.writeFileSync(dest, buffer);
+
+    const workId = form.get("work_id");
+    if (typeof workId === "string" && workId) {
+      // Supermemory: file ingestion — OCR/chunk PDFs for hybrid search (docs/SUPERMEMORY.md)
+      await ingestReferencePdf(dest, workId);
+    }
 
     const relPath = `references/${safeName}`;
     const url = `/api/works/files?path=${encodeURIComponent(relPath)}`;

@@ -12,12 +12,14 @@ interface ReviewAnalyzeStepProps {
   draft: ReferenceDraft;
   onChange: (patch: Partial<ReferenceDraft>) => void;
   onAnalysis: (analysis: ReferenceAnalysis) => void;
+  workId?: string;
 }
 
 export function ReviewAnalyzeStep({
   draft,
   onChange,
   onAnalysis,
+  workId,
 }: ReviewAnalyzeStepProps) {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<ReferenceAnalysis | null>(
@@ -34,6 +36,7 @@ export function ReviewAnalyzeStep({
         abstract: draft.notes,
         url: draft.url,
         file_path: draft.pdf_storage_path,
+        work_id: workId,
       }),
     });
     const data = await res.json();

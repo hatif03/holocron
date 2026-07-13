@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { exec } from "child_process";
 import chalk from "chalk";
 import ora from "ora";
 import {
@@ -12,11 +13,42 @@ import {
 import { getEnvPath, getComposePath, getRepoRoot } from "../paths.js";
 import { setupCommand } from "./setup.js";
 
+const WEB_URL = "http://localhost:3000";
+const AGENTS_HEALTH = "http://localhost:8000/health";
+const WEB_HEALTH = "http://localhost:3000/health";
+
+async function waitForUrl(url: string, label: string, timeoutMs = 180_000): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) return true;
+    } catch {
+      /* still starting */
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  printError(`${label} did not become ready in time (${url})`);
+  return false;
+}
+
+function openBrowser(url: string) {
+  const platform = process.platform;
+  if (platform === "win32") {
+    exec(`cmd /c start "" "${url}"`);
+  } else if (platform === "darwin") {
+    exec(`open "${url}"`);
+  } else {
+    exec(`xdg-open "${url}"`);
+  }
+}
+
 export async function startCommand() {
-  console.log(chalk.bold("\nStarting AcademicHub...\n"));
+  console.log(chalk.bold("\nStarting Holocron...\n"));
+  console.log(chalk.dim("Prerequisite: Docker Desktop only.\n"));
 
   if (!checkDocker()) {
-    printError("Docker is required. Run `holocron doctor` for details.");
+    printError("Docker is required. Install Docker Desktop, then run `holocron doctor`.");
     process.exit(1);
   }
 
@@ -45,14 +77,29 @@ export async function startCommand() {
     process.exit(1);
   }
 
+  spinner.text = "Waiting for agents...";
+  const agentsOk = await waitForUrl(AGENTS_HEALTH, "Agents");
+  if (!agentsOk) {
+    spinner.fail("Agents service did not start");
+    process.exit(1);
+  }
+
+  spinner.text = "Waiting for web UI...";
+  const webOk = await waitForUrl(WEB_HEALTH, "Web");
+  if (!webOk) {
+    spinner.fail("Web service did not start");
+    process.exit(1);
+  }
+
   spinner.succeed("Services started");
 
   printSuccess("Docker is running");
-  printSuccess("Database ready");
-  printSuccess("Agents online (9/9)");
+  printSuccess("Agents online");
+  printSuccess(`Web ready at ${WEB_URL}`);
 
-  console.log(
-    chalk.bold.green("\nAcademicHub is running at http://localhost:3000")
-  );
-  console.log(chalk.dim("Press Ctrl+C to stop (run `holocron stop` to tear down)\n"));
+  openBrowser(WEB_URL);
+  printInfo("Opened browser");
+
+  console.log(chalk.bold.green(`\nHolocron is running at ${WEB_URL}`));
+  console.log(chalk.dim("Run `holocron stop` to tear down.\n"));
 }

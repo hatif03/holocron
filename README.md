@@ -1,21 +1,48 @@
-# Holocron / AcademicHub
+# Holocron
 
-AI-native research platform — map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready papers with a multi-agent AI system powered by K2 Think V2.
+AI-native research platform — map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready papers with a multi-agent AI system. Star Wars–inspired local UI; bring your own LLM key.
 
-## Quick Start (npm)
+## Quick Start
+
+**Only prerequisite:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 ```bash
-# One-command start (requires Docker + K2 Think API key)
 npx holocron start
+```
 
+On first run this will:
+
+1. Prompt for an LLM provider (default: **K2 Think**) and API key — press Enter for mock mode
+2. Start Postgres, agents, LaTeX, and the web UI via Docker
+3. Wait until services are healthy
+4. Open [http://localhost:3000](http://localhost:3000)
+
+```bash
 # Or install globally
 npm install -g holocron
-holocron setup   # configure API keys
-holocron start   # launch at http://localhost:3000
-holocron doctor  # check prerequisites
-holocron status  # service health
-holocron stop    # tear down
+holocron setup    # configure BYOK providers
+holocron start    # launch
+holocron doctor   # check Docker + ports
+holocron status   # service health
+holocron stop     # tear down
 ```
+
+## LLM providers (BYOK)
+
+Configure via `holocron setup` or **Settings** in the UI (`/settings`).
+
+| Provider | Notes |
+|----------|--------|
+| **K2 Think** | Default for demos — [build.k2think.ai](https://build.k2think.ai/) |
+| OpenAI | GPT models |
+| Anthropic | Claude via Messages API |
+| Google | Gemini (OpenAI-compatible endpoint) |
+| OpenRouter | Many models behind one key |
+| Custom | Any OpenAI-compatible base URL |
+
+Empty / mock keys enable placeholder generation for local tours.
+
+Optional: [Semantic Scholar API key](https://www.semanticscholar.org/product/api) for richer literature search.
 
 ## Development
 
@@ -31,14 +58,8 @@ holocron stop    # tear down
 git clone https://github.com/hatif03/holocron.git
 cd holocron
 npm install
-
-# Copy env template
 cp .env.example .env
-
-# Start full stack
 docker compose -f docker/docker-compose.yml up --build
-
-# Seed demo template (10 nodes, 13 edges)
 node scripts/seed-template.mjs
 ```
 
@@ -59,18 +80,12 @@ holocron/
 
 ## Features
 
-- **Research Graph** — Visual canvas with 16 node types (idea, hypothesis, literature, experiment, etc.)
-- **Paper Generation** — Multi-agent pipeline: Planner → Writer → Reviewer → Typesetter → Vlm Review
-- **References** — Semantic Scholar search, PDF upload, AI paper analysis
-- **Agents Dashboard** — Live status for all 9 agents
+- **Research Graph** — Visual canvas with 16 node types
+- **Paper Generation** — Planner → Writer → Reviewer → Typesetter → VLM Review
+- **References (Archives)** — Semantic Scholar, arXiv, PDF upload, AI analysis
+- **Agents Dashboard** — Live status for the writing crew
+- **Settings** — In-app BYOK provider switching
 - **npm CLI** — `npx holocron start` for local deployment
-
-## API Keys
-
-| Key | Required | Get it |
-|-----|----------|--------|
-| K2 Think | Yes | [build.k2think.ai](https://build.k2think.ai/) |
-| Semantic Scholar | No | [semanticscholar.org/product/api](https://www.semanticscholar.org/product/api) |
 
 ## Agents
 

@@ -12,8 +12,14 @@ export async function doctorCommand() {
   if (dockerOk) printSuccess("Docker is running");
   else
     printError(
-      "Docker is not running — install Docker Desktop: https://docker.com/products/docker-desktop"
+      "Docker is not running — Docker Desktop is the only required prerequisite: https://docker.com/products/docker-desktop"
     );
+
+  console.log(
+    chalk.dim(
+      "\nTip: `npx holocron start` runs setup (if needed), starts the stack, and opens the browser.\n"
+    )
+  );
 
   for (const port of [3000, 8000, 5432]) {
     const free = checkPort(port);

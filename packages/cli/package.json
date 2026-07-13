@@ -1,7 +1,7 @@
 {
   "name": "holocron",
   "version": "0.1.0",
-  "description": "AI-native research platform — visual graph to publication-ready papers",
+  "description": "Holocron CLI — start the local AI research platform with one command",
   "bin": {
     "holocron": "./dist/index.js"
   },
@@ -18,11 +18,12 @@
     "node": ">=20"
   },
   "keywords": [
+    "holocron",
     "research",
-    "academic",
     "ai-agents",
     "latex",
-    "k2-think"
+    "k2-think",
+    "byok"
   ],
   "dependencies": {
     "chalk": "^5.4.1",

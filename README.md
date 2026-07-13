@@ -1,48 +1,109 @@
 # Holocron
 
-AI-native research platform — map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready papers with a multi-agent AI system. Star Wars–inspired local UI; bring your own LLM key.
+**Holocron** is a local-first AI research platform. Map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready LaTeX and PDF output through a multi-agent writing pipeline. The UI is Star Wars–inspired; inference is bring-your-own-key (BYOK).
 
-## Quick Start
+Everything runs on your machine. Docker Desktop is the only prerequisite for end users.
 
-**Only prerequisite:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+---
+
+## Quick start
 
 ```bash
 npx holocron start
 ```
 
-On first run this will:
+First run:
 
-1. Prompt for an LLM provider (default: **K2 Think**) and API key — press Enter for mock mode
-2. Start Postgres, agents, LaTeX, and the web UI via Docker
-3. Wait until services are healthy
-4. Open [http://localhost:3000](http://localhost:3000)
+1. Runs the setup wizard if `~/.holocron/.env` does not exist
+2. Prompts for an LLM provider (default: **K2 Think**) — press Enter for mock mode
+3. Starts Postgres, agents, LaTeX, and the web UI
+4. Waits for health checks and opens [http://localhost:3000](http://localhost:3000)
+
+### CLI commands
+
+| Command | Description |
+|---------|-------------|
+| `holocron start` | Start the full stack |
+| `holocron setup` | Configure LLM provider and API keys |
+| `holocron doctor` | Check Docker, Node, and port availability |
+| `holocron status` | Show service health |
+| `holocron stop` | Tear down containers |
+
+Install globally:
 
 ```bash
-# Or install globally
 npm install -g holocron
-holocron setup    # configure BYOK providers
-holocron start    # launch
-holocron doctor   # check Docker + ports
-holocron status   # service health
-holocron stop     # tear down
+holocron start
 ```
+
+---
+
+## What you can do
+
+| Area | Route | Description |
+|------|-------|-------------|
+| **Research Graph** | `/research-graph` | Visual canvas with 16 node types — ideation, knowledge, execution, evidence |
+| **Paper Generation** | `/paper-generation` | Multi-agent pipeline from graph or metadata wizard |
+| **References** | `/references` | Semantic Scholar, arXiv, PDF upload, BibTeX import, AI analysis |
+| **Agents** | `/agents` | Live status for the nine-agent writing crew |
+| **Settings** | `/settings` | Switch LLM provider and API keys (BYOK) |
+
+### Paper generation pipeline
+
+```
+Planner → Writer ⇄ Reviewer → Typesetter → VLM Review
+```
+
+- **Graph mode** — build a research graph, then generate from the `end` node
+- **Metadata mode** — four-step wizard: fields → BibTeX → options → confirm
+
+Venue templates: Nature, IEEE, ICML.
+
+---
 
 ## LLM providers (BYOK)
 
-Configure via `holocron setup` or **Settings** in the UI (`/settings`).
+Configure via **Settings** in the UI or `holocron setup`. Keys stay local — Holocron does not require a cloud account.
 
-| Provider | Notes |
-|----------|--------|
-| **K2 Think** | Default for demos — [build.k2think.ai](https://build.k2think.ai/) |
-| OpenAI | GPT models |
-| Anthropic | Claude via Messages API |
-| Google | Gemini (OpenAI-compatible endpoint) |
-| OpenRouter | Many models behind one key |
-| Custom | Any OpenAI-compatible base URL |
+| Provider | Default model | Notes |
+|----------|---------------|-------|
+| **K2 Think** | `MBZUAI-IFM/K2-Think-v2` | Recommended for demos — [build.k2think.ai](https://build.k2think.ai/) |
+| OpenAI | `gpt-4o` | Official API |
+| Anthropic | `claude-sonnet-4-20250514` | Messages API |
+| Google | `gemini-2.0-flash` | OpenAI-compatible endpoint |
+| OpenRouter | `openai/gpt-4o` | Many models behind one key |
+| Custom | — | Any OpenAI-compatible base URL |
 
-Empty / mock keys enable placeholder generation for local tours.
+Leave the API key empty (or use `mock-key-for-dev`) to run in **mock mode** — placeholder content for local tours without a key.
 
-Optional: [Semantic Scholar API key](https://www.semanticscholar.org/product/api) for richer literature search.
+Optional: [Semantic Scholar API key](https://www.semanticscholar.org/product/api) for richer literature discovery.
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all environment variables.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser["Browser :3000"] --> Web["Next.js web"]
+  Web --> DB["Postgres"]
+  Web --> Agents["FastAPI agents :8000"]
+  Agents --> LLM["LLM provider BYOK"]
+  Agents --> Latex["LaTeX service :8081"]
+  Agents --> Storage["Local storage"]
+```
+
+| Service | Port | Role |
+|---------|------|------|
+| Web | 3000 | Next.js App Router UI and API routes |
+| Agents | 8000 | Python FastAPI multi-agent service |
+| Postgres | 5432 | Research works, references, generations |
+| LaTeX | 8081 | Self-healing PDF compilation |
+
+End-user config lives at `~/.holocron/.env`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for monorepo layout and data flow.
+
+---
 
 ## Development
 
@@ -50,9 +111,9 @@ Optional: [Semantic Scholar API key](https://www.semanticscholar.org/product/api
 
 - Node.js 20+
 - Docker Desktop
-- Python 3.12+ (for local agent development)
+- Python 3.12+ (optional — for running agents outside Docker)
 
-### Setup
+### From source
 
 ```bash
 git clone https://github.com/hatif03/holocron.git
@@ -60,44 +121,69 @@ cd holocron
 npm install
 cp .env.example .env
 docker compose -f docker/docker-compose.yml up --build
+```
+
+Seed a demo research graph (10 nodes, 13 edges):
+
+```bash
 node scripts/seed-template.mjs
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000).
 
-### Monorepo structure
+### Monorepo layout
 
 ```
 holocron/
-├── apps/web/          Next.js frontend
-├── apps/agents/       Python FastAPI multi-agent service
-├── packages/cli/      holocron npm CLI
-├── packages/shared/   Shared types and schemas
-├── templates/         LaTeX venue templates (Nature, IEEE, ICML)
-├── docker/            Docker Compose stacks
-└── db/migrations/     Postgres schema
+├── apps/web/           Next.js 15 frontend
+├── apps/agents/        Python FastAPI agent service
+├── packages/cli/       holocron npm CLI (npx holocron)
+├── packages/shared/    Shared Zod schemas and types
+├── templates/          LaTeX venue templates
+├── docker/             Docker Compose stacks
+├── db/migrations/      Postgres schema
+└── docs/               Architecture and configuration guides
 ```
 
-## Features
+### Scripts
 
-- **Research Graph** — Visual canvas with 16 node types
-- **Paper Generation** — Planner → Writer → Reviewer → Typesetter → VLM Review
-- **References (Archives)** — Semantic Scholar, arXiv, PDF upload, AI analysis
-- **Agents Dashboard** — Live status for the writing crew
-- **Settings** — In-app BYOK provider switching
-- **npm CLI** — `npx holocron start` for local deployment
+```bash
+npm run dev      # Turbo dev (all workspaces)
+npm run build    # Build all packages
+npm run lint     # Lint
+npm run seed     # Seed demo template graph
+```
+
+App-specific guides: [apps/web/README.md](apps/web/README.md), [packages/cli/README.md](packages/cli/README.md).
+
+---
 
 ## Agents
 
-1. **Paper Parser** — PDF understanding and structured extraction
-2. **Template Parser** — LaTeX venue template rules
-3. **Commander** — Pipeline orchestrator
-4. **Writer** — LaTeX section generation
-5. **Typesetter** — Self-healing LaTeX compilation
-6. **Metadata** — Simple-mode paper from metadata fields
-7. **Reviewer** — Logic and style review loop
-8. **Planner** — Outline + Semantic Scholar discovery
-9. **Vlm Review** — Visual PDF layout detection
+| Agent | Role |
+|-------|------|
+| **Paper Parser** | PDF understanding and structured extraction |
+| **Template Parser** | LaTeX venue template rules |
+| **Commander** | Pipeline orchestrator |
+| **Planner** | Outline + Semantic Scholar discovery |
+| **Writer** | LaTeX section generation |
+| **Reviewer** | Logic and style review loop |
+| **Typesetter** | Self-healing LaTeX compilation |
+| **Metadata** | Simple-mode paper from metadata fields |
+| **VLM Review** | Visual PDF layout detection |
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| Docker not running | Start Docker Desktop, then `holocron doctor` |
+| Port in use | Stop conflicting services on 3000, 8000, or 5432 |
+| Agents offline in Settings | Ensure stack is up: `holocron start` |
+| Mock content only | Add a real API key in Settings or `holocron setup` |
+
+---
 
 ## License
 

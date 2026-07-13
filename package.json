@@ -1,6 +1,7 @@
 {
   "name": "holocron-monorepo",
   "private": true,
+  "description": "Holocron — local-first AI research platform (monorepo root)",
   "workspaces": [
     "apps/*",
     "packages/*"

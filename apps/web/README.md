@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Holocron Web
 
-## Getting Started
+Next.js 15 frontend for [Holocron](../../README.md) — research graph editor, paper generation UI, references library, agent dashboard, and BYOK settings.
 
-First, run the development server:
+## Development
+
+From the monorepo root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+docker compose -f docker/docker-compose.yml up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The web app runs at [http://localhost:3000](http://localhost:3000) inside the `web` Docker service with hot reload.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To run the web app alone (requires Postgres and agents separately):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev --workspace=web
+```
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Next.js 15** App Router
+- **React 19**
+- **Tailwind CSS v4** — design tokens in `src/app/globals.css`
+- **@xyflow/react** — research graph canvas
+- **Zustand** — canvas state (`src/lib/canvas-store.ts`)
+- **postgres** — direct SQL (no ORM)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Fonts: Orbitron (display), Exo 2 (body) via `next/font/google`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Structure
 
-## Deploy on Vercel
+```
+src/
+├── app/                    Routes and API handlers
+│   ├── api/                REST endpoints
+│   ├── research-graph/     Graph list + canvas
+│   ├── paper-generation/   Generation list + detail
+│   ├── references/         Reference library
+│   ├── agents/             Agent health page
+│   └── settings/           BYOK LLM config
+├── components/             UI primitives and feature components
+│   ├── ui.tsx              Button, Input, Card, Dialog, etc.
+│   ├── research-graph/     Canvas, nodes, sidebar, fields
+│   └── paper-generation/   Wizard, detail panels
+└── lib/                    db, agents-client, utils, canvas-store
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## API routes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Route | Purpose |
+|-------|---------|
+| `/api/works` | CRUD research works + graph JSON |
+| `/api/references` | Reference library CRUD, search, upload, analyze |
+| `/api/generations` | Paper generation lifecycle |
+| `/api/settings/llm` | Proxy to agents LLM config |
+
+## Theming
+
+Dark mode is default. Tokens use the Holocron blend palette:
+
+- **Crimson** (`--color-primary`) — actions and glow
+- **Crawl yellow** (`--color-accent-yellow`) — display titles
+- **Cyan** (`--color-accent-cyan`) — info and status
+
+Toggle light/dark via the navbar theme switch.
+
+## Environment
+
+Copy `.env.example` to the repo root. Web reads:
+
+- `DATABASE_URL`
+- `AGENTS_SERVICE_URL` / `NEXT_PUBLIC_AGENTS_URL`
+- `STORAGE_PATH`
+
+See [docs/CONFIGURATION.md](../../docs/CONFIGURATION.md) for the full list.

@@ -2,6 +2,7 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "description": "Holocron web UI — Next.js frontend",
   "scripts": {
     "dev": "next dev --turbopack -p 3000",
     "build": "next build",

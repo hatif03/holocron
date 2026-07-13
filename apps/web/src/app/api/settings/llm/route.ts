@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLlmConfig, updateLlmConfig } from "@/lib/agents-client";
+import { LOCAL_USER_ID, storeUserPreference } from "@/lib/supermemory-client";
 
 const FALLBACK_PROVIDERS = [
   "k2think",
@@ -36,6 +37,13 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const config = await updateLlmConfig(body);
+
+    // Supermemory: add — persist user LLM/style preferences (docs/SUPERMEMORY.md)
+    await storeUserPreference(
+      LOCAL_USER_ID,
+      `LLM provider: ${body.provider ?? config.provider}, model: ${body.model ?? config.model}`
+    );
+
     return NextResponse.json(config);
   } catch (e) {
     return NextResponse.json(

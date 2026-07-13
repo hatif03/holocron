@@ -358,9 +358,9 @@ export function getTypeBadgeColor(type: NodeType): string {
 }
 
 export const TYPE_BADGE_STYLES: Record<string, string> = {
-  purple: "bg-primary/20 text-primary",
-  amber: "bg-accent-yellow/15 text-accent-yellow",
-  blue: "bg-accent-cyan/15 text-accent-cyan",
+  purple: "bg-violet-500/15 text-violet-400",
+  amber: "bg-amber-500/15 text-amber-400",
+  blue: "bg-blue-500/15 text-blue-400",
   green: "bg-emerald-500/15 text-emerald-400",
   orange: "bg-orange-500/15 text-orange-300",
 };

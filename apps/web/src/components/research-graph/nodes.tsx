@@ -20,22 +20,22 @@ import {
 import { Button } from "@/components/ui";
 
 const NODE_COLORS: Record<string, string> = {
-  start: "border-primary/70 bg-primary/10",
-  end: "border-primary/70 bg-primary/10",
-  idea: "border-accent-yellow/60 bg-accent-yellow/10",
-  question: "border-accent-yellow/60 bg-accent-yellow/10",
-  hypothesis: "border-accent-yellow/60 bg-accent-yellow/10",
-  literature: "border-accent-cyan/60 bg-accent-cyan/10",
-  concept: "border-accent-cyan/60 bg-accent-cyan/10",
-  method: "border-emerald-400/60 bg-emerald-500/10",
-  experiment: "border-emerald-400/60 bg-emerald-500/10",
-  metric: "border-emerald-400/60 bg-emerald-500/10",
-  data: "border-emerald-400/60 bg-emerald-500/10",
-  result: "border-orange-400/60 bg-orange-500/10",
-  finding: "border-orange-400/60 bg-orange-500/10",
-  figure: "border-orange-400/60 bg-orange-500/10",
-  table: "border-orange-400/60 bg-orange-500/10",
-  paper_section: "border-primary/70 bg-primary/10",
+  start: "border-violet-400/40 bg-violet-500/10",
+  end: "border-violet-400/40 bg-violet-500/10",
+  paper_section: "border-violet-400/40 bg-violet-500/10",
+  idea: "border-amber-400/40 bg-amber-500/10",
+  question: "border-amber-400/40 bg-amber-500/10",
+  hypothesis: "border-amber-400/40 bg-amber-500/10",
+  literature: "border-blue-400/40 bg-blue-500/10",
+  concept: "border-blue-400/40 bg-blue-500/10",
+  method: "border-emerald-400/40 bg-emerald-500/10",
+  experiment: "border-emerald-400/40 bg-emerald-500/10",
+  metric: "border-emerald-400/40 bg-emerald-500/10",
+  data: "border-emerald-400/40 bg-emerald-500/10",
+  result: "border-orange-400/40 bg-orange-500/10",
+  finding: "border-orange-400/40 bg-orange-500/10",
+  figure: "border-orange-400/40 bg-orange-500/10",
+  table: "border-orange-400/40 bg-orange-500/10",
 };
 
 const STATUS_LABELS: Record<NodeStatus, string> = {
@@ -113,7 +113,7 @@ function ResearchNode({ id, data, selected }: NodeProps) {
         <div className="flex-1 overflow-auto px-3 py-2">
           {type === "end" ? (
             <div className="space-y-2">
-              <div className="rounded-sm bg-accent-cyan/10 border border-accent-cyan/30 px-2 py-1.5 text-[10px] text-accent-cyan">
+              <div className="rounded-lg bg-blue-500/10 border border-blue-400/30 px-2 py-1.5 text-[10px] text-blue-400">
                 {getNodeDescription("end")}
               </div>
               <NodeFieldRenderer

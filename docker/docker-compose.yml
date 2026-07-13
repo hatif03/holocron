@@ -39,6 +39,10 @@ services:
       STORAGE_PATH: /data/storage
       TEMPLATES_PATH: /app/templates
       LATEX_SERVICE_URL: http://latex:8080
+      SUPERMEMORY_API_URL: http://host.docker.internal:6767
+      SUPERMEMORY_API_KEY: ${SUPERMEMORY_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ../apps/agents:/app
       - ../templates:/app/templates:ro
@@ -70,6 +74,10 @@ services:
       STORAGE_PATH: /data/storage
       AUTH_MODE: local
       K2THINK_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
+      SUPERMEMORY_API_URL: http://host.docker.internal:6767
+      SUPERMEMORY_API_KEY: ${SUPERMEMORY_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ../apps/web:/app/apps/web
       - ../packages:/app/packages

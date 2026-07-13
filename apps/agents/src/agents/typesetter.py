@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -6,7 +7,6 @@ from pydantic import BaseModel
 
 from ..config import settings
 from ..llm import llm
-
 
 class ParsePdfRequest(BaseModel):
     text: str = ""
@@ -117,12 +117,13 @@ async def compile_latex(req: CompileRequest, max_retries: int = 3) -> CompileRes
             log = str(e)
 
         main_path = project / req.main_file
-        if main_path.exists() and attempt < max_retries - 1:
-            error_context = log[-2000:] if log else "Unknown error"
+        if main_path.exists() and attempt < max_retries - 1 and log:
+            error_context = log[-2000:]
             fix = await llm.complete(
                 "Fix LaTeX compilation errors. Return only the corrected LaTeX file content.",
                 f"Errors:\n{error_context}\n\nCurrent file:\n{main_path.read_text(encoding='utf-8')[:4000]}",
             )
             main_path.write_text(fix, encoding="utf-8")
+            await asyncio.sleep(2**attempt)
 
     return CompileResponse(success=False, pdf_path=None, log=log)

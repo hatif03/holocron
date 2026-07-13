@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, BackgroundTasks, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
 
@@ -123,7 +123,16 @@ async def paper_parser_upload(file: UploadFile = File(...)):
 
     storage = Path(settings.storage_path) / "uploads"
     storage.mkdir(parents=True, exist_ok=True)
-    dest = storage / file.filename
+
+    raw_name = file.filename or ""
+    safe_name = Path(raw_name).name
+    if not safe_name or safe_name in (".", "..") or raw_name != safe_name:
+        safe_name = f"{uuid.uuid4()}.pdf"
+
+    dest = (storage / safe_name).resolve()
+    if not str(dest).startswith(str(storage.resolve())):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
     async with aiofiles.open(dest, "wb") as f:
         content = await file.read()
         await f.write(content)

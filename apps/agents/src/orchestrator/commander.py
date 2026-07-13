@@ -18,7 +18,7 @@ EventCallback = Callable[[str, str, str, dict], Awaitable[None]]
 
 
 class GenerateRequest(BaseModel):
-    generation_id: str
+    generation_id: str | None = None
     work_id: str
     graph: dict[str, Any]
     config: dict[str, Any]
@@ -48,7 +48,7 @@ async def run_generation(
     req: GenerateRequest,
     on_event: EventCallback | None = None,
 ) -> GenerateResponse:
-    gen_id = req.generation_id
+    gen_id = req.generation_id or str(uuid.uuid4())
     config = req.config
     style = config.get("styleGuide", "Nature")
     max_reviews = config.get("maxReviewIterations", 3)
@@ -172,8 +172,13 @@ async def run_generation(
 
 def _build_main_tex(title: str, style: str, sections: list[str]) -> str:
     doc_class = "article"
+    docclass_line = (
+        f"\\documentclass[twocolumn]{{{doc_class}}}"
+        if style == "Nature"
+        else f"\\documentclass{{{doc_class}}}"
+    )
     lines = [
-        f"\\documentclass[{ 'twocolumn' if style == 'Nature' else ''}]{{{doc_class}}}",
+        docclass_line,
         "\\usepackage{graphicx}",
         "\\usepackage{amsmath}",
         "\\usepackage{hyperref}",

@@ -98,8 +98,8 @@ export async function GET(
     const reviewCount =
       updatedGen.review_count ||
       events.filter(
-        (e: { agent: string; event_type: string }) =>
-          e.agent === "Reviewer" && e.event_type === "completed"
+        (e) =>
+          String(e.agent) === "Reviewer" && String(e.event_type) === "completed"
       ).length;
 
     let fileTree: FileNode[] = [];

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { BookOpen, Plus, Search } from "lucide-react";
 import { Button, Input } from "@/components/ui";
-import { ReferenceCard, type ReferenceItem } from "./ReferenceCard";
-import { AddReferenceModal } from "./AddReferenceModal";
+import { ReferenceCard, type ReferenceItem } from "@/components/references/ReferenceCard";
+import { AddReferenceModal } from "@/components/references/AddReferenceModal";
 
 export default function ReferencesPage() {
   const [refs, setRefs] = useState<ReferenceItem[]>([]);

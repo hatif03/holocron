@@ -5,6 +5,8 @@ import { ChevronDown, ChevronRight, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui";
 import { LogEntry, type LogEvent } from "./LogEntry";
 
+export type { LogEvent };
+
 const PHASE_LABELS: Record<string, string> = {
   planning: "Planning",
   reference_discovery: "Reference Discovery",

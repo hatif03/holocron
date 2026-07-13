@@ -21,6 +21,7 @@ interface ProcessLogPanelProps {
   events: LogEvent[];
   selectedEventIndex: number | null;
   onSelectEvent: (index: number) => void;
+  isRunning?: boolean;
 }
 
 interface GroupedPhase {
@@ -61,15 +62,30 @@ export function ProcessLogPanel({
   events,
   selectedEventIndex,
   onSelectEvent,
+  isRunning = false,
 }: ProcessLogPanelProps) {
   const groups = groupEvents(events);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const glowing = isRunning || events.length === 0;
 
   return (
-    <Card className="p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-      <h2 className="font-semibold mb-3 text-sm">Process Log</h2>
+    <Card className={`p-4 max-h-[calc(100vh-12rem)] overflow-y-auto ${glowing ? "thinking-glow" : ""}`}>
+      <h2 className="font-display text-sm font-semibold mb-3 text-accent-yellow tracking-wide uppercase">
+        Process Log
+      </h2>
       {events.length === 0 && (
-        <p className="text-sm text-muted-foreground">Waiting for agent activity...</p>
+        <div className="flex items-center gap-3 py-4">
+          <div className="h-8 w-8 rounded-sm border border-primary/60 bg-primary/20 holocron-pulse" />
+          <p className="text-sm text-muted-foreground">
+            Agents assembling the holocron…
+          </p>
+        </div>
+      )}
+      {isRunning && events.length > 0 && (
+        <div className="mb-3 flex items-center gap-2 text-xs text-primary">
+          <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
+          Pipeline active
+        </div>
       )}
       {groups.map(({ phase, items: evs }) => {
         if (!evs.length) return null;
@@ -95,7 +111,7 @@ export function ProcessLogPanel({
               <span className="ml-auto text-xs text-muted-foreground">{evs.length}</span>
             </button>
             {!isCollapsed && (
-              <div className="pl-2 mt-1 space-y-0.5 border-l-2 border-emerald-200 ml-2">
+              <div className="pl-2 mt-1 space-y-0.5 border-l-2 border-emerald-500/40 ml-2">
                 {evs.map(({ event: ev, globalIndex: gIdx }) => (
                   <LogEntry
                     key={gIdx}

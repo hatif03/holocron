@@ -98,6 +98,10 @@ export default function PaperGenerationDetailPage({
           events={events}
           selectedEventIndex={selectedEventIndex}
           onSelectEvent={selectEvent}
+          isRunning={
+            String(gen.status || "") === "running" ||
+            String(gen.status || "") === "pending"
+          }
         />
         <ExplorerPanel
           fileTree={fileTree}

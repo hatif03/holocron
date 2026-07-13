@@ -12,6 +12,7 @@ import {
 } from "../docker.js";
 import { getEnvPath, getComposePath, getRepoRoot } from "../paths.js";
 import { setupCommand } from "./setup.js";
+import { envHasSupermemoryKey, waitForSupermemoryKey } from "../supermemory.js";
 
 const WEB_URL = "http://localhost:3000";
 const AGENTS_HEALTH = "http://localhost:8000/health";
@@ -92,6 +93,16 @@ export async function startCommand() {
   }
 
   spinner.succeed("Services started");
+
+  if (!envHasSupermemoryKey(envPath)) {
+    spinner.start("Capturing Supermemory API key...");
+    const captured = await waitForSupermemoryKey(envPath);
+    if (captured) {
+      spinner.succeed("Supermemory API key saved to ~/.holocron/.env");
+    } else {
+      spinner.warn("Supermemory key not found — check docker logs for sm_* key");
+    }
+  }
 
   printSuccess("Docker is running");
   printSuccess("Agents online");

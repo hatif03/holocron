@@ -21,9 +21,15 @@ services:
       - "8000:8000"
     env_file:
       - ${HOLOCRON_ENV_FILE:-~/.holocron/.env}
+    environment:
+      SUPERMEMORY_API_URL: http://host.docker.internal:6767
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
+      supermemory:
+        condition: service_started
 
   latex:
     image: ghcr.io/hatif03/holocron-latex:0.1.0
@@ -36,6 +42,27 @@ services:
       - "3000:3000"
     env_file:
       - ${HOLOCRON_ENV_FILE:-~/.holocron/.env}
+    environment:
+      SUPERMEMORY_API_URL: http://host.docker.internal:6767
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - postgres
       - agents
+      - supermemory
+
+  supermemory:
+    build: ./supermemory
+    ports:
+      - "6767:6767"
+    env_file:
+      - ${HOLOCRON_ENV_FILE:-~/.holocron/.env}
+    environment:
+      SUPERMEMORY_DATA_DIR: /data
+      OPENAI_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
+      OPENAI_BASE_URL: ${K2THINK_BASE_URL:-https://www.k2think.ai/api/chat/completions}
+      OPENAI_MODEL: ${K2THINK_MODEL:-MBZUAI-IFM/K2-Think-v2}
+      SUPERMEMORY_EMBEDDING_RAM_LIMIT: 2gb
+    volumes:
+      - ${HOLOCRON_DATA:-~/.holocron/data}/supermemory:/data
+    restart: unless-stopped

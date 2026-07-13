@@ -108,6 +108,8 @@ export async function setupCommand() {
     `AUTH_MODE=local`,
     `AGENTS_SERVICE_URL=http://localhost:8000`,
     `NEXT_PUBLIC_AGENTS_URL=http://localhost:8000`,
+    `SUPERMEMORY_API_URL=http://localhost:6767`,
+    `SUPERMEMORY_API_KEY=`,
   ];
 
   fs.writeFileSync(envPath, envLines.join("\n") + "\n");

@@ -21,7 +21,7 @@ export async function doctorCommand() {
     )
   );
 
-  for (const port of [3000, 8000, 5432]) {
+  for (const port of [3000, 8000, 5432, 6767]) {
     const free = checkPort(port);
     if (free) printSuccess(`Port ${port} is available`);
     else printError(`Port ${port} is in use`);

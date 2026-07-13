@@ -69,13 +69,23 @@ export async function POST(req: NextRequest) {
       )
     `;
 
-    startGeneration({
-      generation_id: genId,
-      work_id: workId,
-      graph,
-      config: body.config || {},
-      title,
-    }).catch(() => {});
+    try {
+      await startGeneration({
+        generation_id: genId,
+        work_id: workId,
+        graph,
+        config: body.config || {},
+        title,
+      });
+    } catch (err) {
+      await db`
+        UPDATE paper_generations
+        SET status = 'failed', current_step = 'Failed to start generation', updated_at = NOW()
+        WHERE id = ${genId}::uuid
+      `;
+      const message = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
 
     return NextResponse.json({ id: genId, status: "running" });
   } catch (e) {

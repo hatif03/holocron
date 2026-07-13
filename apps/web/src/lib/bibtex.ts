@@ -17,12 +17,17 @@ function extractField(entry: string, field: string): string {
 
   const start = match.index + match[0].length;
   const open = entry[start - 1];
+  const close = open === "{" ? "}" : '"';
   let depth = 1;
   let i = start;
   while (i < entry.length && depth > 0) {
     const ch = entry[i];
+    if (ch === "\\") {
+      i += 2;
+      continue;
+    }
     if (ch === open) depth++;
-    else if (ch === (open === "{" ? "}" : '"')) depth--;
+    else if (ch === close) depth--;
     i++;
   }
   return entry.slice(start, i - 1).trim();

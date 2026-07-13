@@ -110,6 +110,12 @@ export async function startGeneration(body: unknown) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(
+      detail || `Agents service failed to start generation (${res.status})`
+    );
+  }
   return res.json();
 }
 

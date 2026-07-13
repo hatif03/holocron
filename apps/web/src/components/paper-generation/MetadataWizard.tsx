@@ -73,6 +73,10 @@ export function MetadataWizard({ open, onClose }: MetadataWizardProps) {
     });
     const data = await res.json();
     setSubmitting(false);
+    if (!res.ok) {
+      alert(data.error || "Failed to start paper generation");
+      return;
+    }
     onClose();
     setStep(1);
     setMetadata(EMPTY_METADATA);

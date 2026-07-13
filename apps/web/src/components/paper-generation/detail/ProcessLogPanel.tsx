@@ -23,17 +23,27 @@ interface ProcessLogPanelProps {
   onSelectEvent: (index: number) => void;
 }
 
-function groupEvents(events: LogEvent[]): Record<string, LogEvent[]> {
-  const groups: Record<string, LogEvent[]> = { default: [] };
+interface GroupedPhase {
+  phase: string;
+  items: { event: LogEvent; globalIndex: number }[];
+}
+
+function groupEvents(events: LogEvent[]): GroupedPhase[] {
+  const phaseMap: Record<string, { event: LogEvent; globalIndex: number }[]> = {};
+  const phaseOrder: string[] = [];
   let currentPhase = "default";
 
-  for (const ev of events) {
+  events.forEach((ev, globalIndex) => {
     const phase = (ev.metadata?.phase as string) || inferPhase(ev);
     if (phase && PHASE_LABELS[phase]) currentPhase = phase;
-    if (!groups[currentPhase]) groups[currentPhase] = [];
-    groups[currentPhase].push(ev);
-  }
-  return groups;
+    if (!phaseMap[currentPhase]) {
+      phaseMap[currentPhase] = [];
+      phaseOrder.push(currentPhase);
+    }
+    phaseMap[currentPhase].push({ event: ev, globalIndex });
+  });
+
+  return phaseOrder.map((phase) => ({ phase, items: phaseMap[phase] }));
 }
 
 function inferPhase(ev: LogEvent): string {
@@ -55,26 +65,17 @@ export function ProcessLogPanel({
   const groups = groupEvents(events);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  const globalIndex = (phase: string, localIdx: number): number => {
-    let idx = 0;
-    for (const [p, evs] of Object.entries(groups)) {
-      if (p === phase) return idx + localIdx;
-      idx += evs.length;
-    }
-    return localIdx;
-  };
-
   return (
     <Card className="p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
       <h2 className="font-semibold mb-3 text-sm">Process Log</h2>
       {events.length === 0 && (
         <p className="text-sm text-muted-foreground">Waiting for agent activity...</p>
       )}
-      {Object.entries(groups).map(([phase, evs]) => {
+      {groups.map(({ phase, items: evs }) => {
         if (!evs.length) return null;
         const isCollapsed = collapsed[phase];
         const label = PHASE_LABELS[phase] || phase;
-        const done = evs.some((e) => e.event_type === "completed");
+        const done = evs.some(({ event: e }) => e.event_type === "completed");
 
         return (
           <div key={phase} className="mb-3 border-b border-border/50 pb-2 last:border-0">
@@ -95,17 +96,14 @@ export function ProcessLogPanel({
             </button>
             {!isCollapsed && (
               <div className="pl-2 mt-1 space-y-0.5 border-l-2 border-emerald-200 ml-2">
-                {evs.map((ev, localIdx) => {
-                  const gIdx = globalIndex(phase, localIdx);
-                  return (
-                    <LogEntry
-                      key={gIdx}
-                      event={ev}
-                      selected={selectedEventIndex === gIdx}
-                      onClick={() => onSelectEvent(gIdx)}
-                    />
-                  );
-                })}
+                {evs.map(({ event: ev, globalIndex: gIdx }) => (
+                  <LogEntry
+                    key={gIdx}
+                    event={ev}
+                    selected={selectedEventIndex === gIdx}
+                    onClick={() => onSelectEvent(gIdx)}
+                  />
+                ))}
               </div>
             )}
           </div>

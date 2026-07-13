@@ -1,6 +1,6 @@
 # Holocron
 
-**Holocron** is a local-first AI research platform. Map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready LaTeX and PDF output through a multi-agent writing pipeline. The UI is Star Wars–inspired; inference is bring-your-own-key (BYOK).
+**Holocron** is a local-first AI research platform. Map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready LaTeX and PDF output through a multi-agent writing pipeline. The UI follows a **Research Workbench** aesthetic — calm, data-dense surfaces for long research sessions; inference is bring-your-own-key (BYOK).
 
 Everything runs on your machine. Docker Desktop is the only prerequisite for end users.
 
@@ -45,7 +45,7 @@ holocron start
 | **Research Graph** | `/research-graph` | Visual canvas with 16 node types — ideation, knowledge, execution, evidence |
 | **Paper Generation** | `/paper-generation` | Multi-agent pipeline from graph or metadata wizard |
 | **References** | `/references` | Semantic Scholar, arXiv, PDF upload, BibTeX import, AI analysis |
-| **Agents** | `/agents` | Live status for the nine-agent writing crew |
+| **Agents** | `/agents` | Live status for the multi-agent pipeline |
 | **Settings** | `/settings` | Switch LLM provider and API keys (BYOK) |
 
 ### Paper generation pipeline

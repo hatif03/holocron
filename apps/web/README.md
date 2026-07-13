@@ -28,7 +28,7 @@ npm run dev --workspace=web
 - **Zustand** — canvas state (`src/lib/canvas-store.ts`)
 - **postgres** — direct SQL (no ORM)
 
-Fonts: Orbitron (display), Exo 2 (body) via `next/font/google`.
+Fonts: **Inter** (UI) and **JetBrains Mono** (logs, code, BibTeX) via `next/font/google`.
 
 ## Structure
 
@@ -57,13 +57,21 @@ src/
 | `/api/generations` | Paper generation lifecycle |
 | `/api/settings/llm` | Proxy to agents LLM config |
 
-## Theming
+## Theming (Research Workbench)
 
-Dark mode is default. Tokens use the Holocron blend palette:
+Dark mode is default. Neutral surfaces with a single blue accent — inspired by research tools like Elicit and Linear.
 
-- **Crimson** (`--color-primary`) — actions and glow
-- **Crawl yellow** (`--color-accent-yellow`) — display titles
-- **Cyan** (`--color-accent-cyan`) — info and status
+| Token | Dark | Light | Use |
+|-------|------|-------|-----|
+| `--color-background` | `#0f1117` | `#fafafa` | Page background |
+| `--color-card` | `#181b24` | `#ffffff` | Panels and cards |
+| `--color-primary` | `#2563eb` | `#1d4ed8` | Actions, links, active nav |
+| `--color-muted-foreground` | `#94a3b8` | `#64748b` | Secondary text |
+| `--color-success` | `#22c55e` | `#16a34a` | Success badges |
+| `--color-warning` | `#f59e0b` | `#d97706` | Warning badges |
+| `--color-info` | `#3b82f6` | `#2563eb` | Info badges |
+
+Graph nodes use semantic category colors (violet control, amber ideation, blue knowledge, emerald execution, orange evidence).
 
 Toggle light/dark via the navbar theme switch.
 

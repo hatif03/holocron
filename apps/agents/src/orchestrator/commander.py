@@ -14,6 +14,7 @@ from ..agents.writer import DraftRequest, draft_section
 from ..agents.reviewer import ReviewRequest, review_section
 from ..agents.typesetter import CompileRequest, compile_latex
 from ..agents.vlm_review import VlmReviewRequest, review_pdf
+from ..supermemory_client import context_for_work, search_work, store_memory
 
 EventCallback = Callable[[str, str, str, dict], Awaitable[None]]
 
@@ -65,6 +66,9 @@ async def run_generation(
 
     await _emit(on_event, "Commander", "agent", "CommanderAgent: Starting paper generation pipeline")
 
+    # Supermemory: profile — load work + user context before agents run (docs/SUPERMEMORY.md)
+    memory_ctx = await context_for_work(req.work_id, query=req.title)
+
     plan = None
     if enable_planning:
         await _emit(
@@ -75,7 +79,9 @@ async def run_generation(
             {"phase": "planning"},
         )
         t0 = time.perf_counter()
-        plan_result = await plan_paper(PlanRequest(graph=req.graph))
+        plan_result = await plan_paper(
+            PlanRequest(graph=req.graph, work_id=req.work_id, query=req.title)
+        )
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
         plan = plan_result.model_dump()
 
@@ -120,6 +126,14 @@ async def run_generation(
             },
         )
 
+        # Supermemory: add — persist plan for future runs (docs/SUPERMEMORY.md)
+        await store_memory(
+            json.dumps({"plan": plan, "refs": plan_result.discovered_refs}),
+            req.work_id,
+            custom_id=f"gen_{gen_id}_plan",
+            metadata={"type": "planner", "generationId": gen_id, "workId": req.work_id},
+        )
+
     sections = (plan or {}).get("sections") or [
         {"name": "Abstract"},
         {"name": "Introduction"},
@@ -150,10 +164,18 @@ async def run_generation(
         )
 
         t0 = time.perf_counter()
+        # Supermemory: hybrid search — section-relevant prior drafts (docs/SUPERMEMORY.md)
+        section_memory = await search_work(req.work_id, f"{name} section {req.title}", limit=3)
         draft = await draft_section(
             DraftRequest(
                 section_name=name,
-                context={"graph": req.graph, "plan": plan, "title": req.title},
+                context={
+                    "graph": req.graph,
+                    "plan": plan,
+                    "title": req.title,
+                    "memory": memory_ctx,
+                    "section_memory": section_memory,
+                },
                 style_guide=style,
             )
         )
@@ -191,11 +213,37 @@ async def run_generation(
                     break
                 if review.revised_content:
                     content = review.revised_content
+                    # Supermemory: add — capture review feedback (docs/SUPERMEMORY.md)
+                    await store_memory(
+                        f"section: {name}\nreview feedback:\n{review.feedback or ''}\nrevised:\n{content[:2000]}",
+                        req.work_id,
+                        custom_id=f"gen_{gen_id}_{safe_name}_review",
+                        metadata={
+                            "type": "reviewer",
+                            "generationId": gen_id,
+                            "workId": req.work_id,
+                            "section": name,
+                        },
+                    )
 
         section_path = sections_dir / f"{safe_name}.tex"
         section_path.write_text(content, encoding="utf-8")
         section_files[name] = content
         total_words += draft.word_count
+
+        # Supermemory: add — persist section draft (docs/SUPERMEMORY.md)
+        await store_memory(
+            f"section: {name}\n{content}",
+            req.work_id,
+            custom_id=f"gen_{gen_id}_{safe_name}",
+            metadata={
+                "type": "writer",
+                "generationId": gen_id,
+                "workId": req.work_id,
+                "section": name,
+            },
+        )
+
         await _emit(
             on_event,
             "Writer",
@@ -245,6 +293,20 @@ async def run_generation(
             )
 
     await _emit(on_event, "Commander", "completed", f"Paper generation complete ({total_words} words total)")
+
+    # Supermemory: add — generation milestone (docs/SUPERMEMORY.md)
+    await store_memory(
+        json.dumps({
+            "title": req.title,
+            "generationId": gen_id,
+            "wordCount": total_words,
+            "sections": list(section_files.keys()),
+            "status": "completed" if pdf_path else "completed_with_warnings",
+        }),
+        req.work_id,
+        custom_id=f"gen_{gen_id}_complete",
+        metadata={"type": "generation_complete", "generationId": gen_id, "workId": req.work_id},
+    )
 
     return GenerateResponse(
         generation_id=gen_id,

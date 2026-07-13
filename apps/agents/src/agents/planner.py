@@ -6,11 +6,13 @@ from pydantic import BaseModel
 
 from ..config import settings
 from ..llm import llm
+from ..supermemory_client import search_work
 
 
 class PlanRequest(BaseModel):
     graph: dict[str, Any]
     query: str = ""
+    work_id: str = ""
 
 
 class PlanResponse(BaseModel):
@@ -57,10 +59,23 @@ async def plan_paper(req: PlanRequest) -> PlanResponse:
     nodes = req.graph.get("nodes", [])
     query = req.query or _derive_query(nodes)
 
+    # Supermemory: hybrid search — complement S2 with user's ingested library (docs/SUPERMEMORY.md)
+    local_context = ""
+    if req.work_id:
+        local_context = await search_work(req.work_id, query, limit=5)
+
     refs = await search_semantic_scholar(query)
 
     system = "You are the Planner agent. Create a detailed paragraph-level paper outline from a research graph. Return JSON with sections array."
-    user = f"Research graph:\n{json.dumps(req.graph, indent=2)}\n\nSearch query: {query}"
+    user_parts = [
+        f"Research graph:\n{json.dumps(req.graph, indent=2)}",
+        f"Search query: {query}",
+    ]
+    if local_context:
+        user_parts.append(f"Prior research from user's library:\n{local_context}")
+    if refs:
+        user_parts.append(f"Semantic Scholar results:\n{json.dumps(refs[:5], indent=2)}")
+    user = "\n\n".join(user_parts)
 
     raw = await llm.complete(system, user)
     try:

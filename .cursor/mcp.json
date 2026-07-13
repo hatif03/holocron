@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "supermemory-ai": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "https://supermemory.ai/docs/mcp"
+      ]
+    }
+  }
+}

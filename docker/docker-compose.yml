@@ -79,6 +79,23 @@ services:
       - agents
     command: npm run dev --workspace=web
 
+  supermemory:
+    build: ./supermemory
+    ports:
+      - "6767:6767"
+    env_file:
+      - ../.env
+    environment:
+      SUPERMEMORY_DATA_DIR: /data
+      OPENAI_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
+      OPENAI_BASE_URL: ${K2THINK_BASE_URL:-https://www.k2think.ai/api/chat/completions}
+      OPENAI_MODEL: ${K2THINK_MODEL:-MBZUAI-IFM/K2-Think-v2}
+      SUPERMEMORY_EMBEDDING_RAM_LIMIT: 2gb
+    volumes:
+      - supermemory_data:/data
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   storage_data:
+  supermemory_data:

@@ -1,0 +1,44 @@
+---
+description: Supermemory Local conventions for the Localhost:6767 hackathon — always use local server, containerTag scoping, and canonical API surface
+alwaysApply: true
+---
+
+# Supermemory Local (Holocron)
+
+## Server
+
+- Base URL: `process.env.SUPERMEMORY_API_URL ?? "http://localhost:6767"`
+- Hackathon requirement: call the **local** server, not `https://api.supermemory.ai`
+- Start via `docker compose -f docker/docker-compose.yml up supermemory` or `.\docker\supermemory\bootstrap.ps1`
+
+## Scoping (load-bearing)
+
+Every write and search **must** include `containerTag` (singular string in JSON body).
+
+Holocron defaults:
+- `work_{workId}` — per research work
+- `user_{userId}` — per user preferences
+
+## Canonical API
+
+Use only:
+- `POST /v3/documents`, `POST /v3/documents/file`
+- `POST /v4/search`, `POST /v4/profile`
+- `PATCH /v3/settings`
+- Auth: `Authorization: Bearer $SUPERMEMORY_API_KEY`
+- SDK: `client.add()`, `client.search.memories()`, `client.profile()`
+
+Do not use `/v1/*`, `/v3/search`, `/v3/memories`, or `x-api-key` headers.
+
+## Integration pattern
+
+1. Configure settings once with Holocron `filterPrompt`
+2. `profile({ containerTag, q })` before LLM calls
+3. `add({ content, containerTag })` after interactions
+4. Python SDK in agents; TypeScript SDK in web
+
+## Reference
+
+- Skill: `.cursor/skills/supermemory-local/`
+- Docs: `docs/SUPERMEMORY.md`
+- Use Supermemory docs MCP for API lookups

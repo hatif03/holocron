@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getDefaultNodeDataFromSchema } from "./node-field-schemas.js";
 
 export const NODE_TYPES = [
   "start",
@@ -80,6 +81,7 @@ export const generatePaperConfigSchema = z.object({
   enableReviewLoop: z.boolean().default(true),
   maxReviewIterations: z.number().min(1).max(5).default(3),
   pauseForFeedback: z.boolean().default(false),
+  compilePdf: z.boolean().default(true),
 });
 
 export type GeneratePaperConfig = z.infer<typeof generatePaperConfigSchema>;
@@ -153,20 +155,7 @@ export const AGENTS = [
 ] as const;
 
 export function getDefaultNodeData(type: NodeType): Record<string, unknown> {
-  switch (type) {
-    case "start":
-      return {
-        paper_title: "",
-        target_venue: "",
-        deadline: "",
-      };
-    case "literature":
-      return { bibtex: "", user_notes: "", file_path: "" };
-    case "end":
-      return { notes: "" };
-    default:
-      return { content: "" };
-  }
+  return getDefaultNodeDataFromSchema(type);
 }
 
 export function getNodeTypeLabel(type: NodeType): string {

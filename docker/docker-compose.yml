@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: holocron
+      POSTGRES_PASSWORD: holocron
+      POSTGRES_DB: holocron
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U holocron"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  agents:
+    build:
+      context: ../apps/agents
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      K2THINK_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
+      K2THINK_BASE_URL: ${K2THINK_BASE_URL:-https://www.k2think.ai/api/chat/completions}
+      K2THINK_MODEL: ${K2THINK_MODEL:-MBZUAI-IFM/K2-Think-v2}
+      SEMANTIC_SCHOLAR_API_KEY: ${SEMANTIC_SCHOLAR_API_KEY:-}
+      DATABASE_URL: postgresql://holocron:holocron@postgres:5432/holocron
+      STORAGE_PATH: /data/storage
+      TEMPLATES_PATH: /app/templates
+      LATEX_SERVICE_URL: http://latex:8080
+    volumes:
+      - ../apps/agents:/app
+      - ../templates:/app/templates:ro
+      - storage_data:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+  latex:
+    build:
+      context: ./latex
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    volumes:
+      - storage_data:/data/storage
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://holocron:holocron@postgres:5432/holocron
+      AGENTS_SERVICE_URL: http://agents:8000
+      NEXT_PUBLIC_AGENTS_URL: http://localhost:8000
+      STORAGE_PATH: /data/storage
+      AUTH_MODE: local
+      K2THINK_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
+    volumes:
+      - ../apps/web:/app/apps/web
+      - ../packages:/app/packages
+      - storage_data:/data/storage
+    depends_on:
+      - postgres
+      - agents
+    command: npm run dev --workspace=web
+
+volumes:
+  postgres_data:
+  storage_data:

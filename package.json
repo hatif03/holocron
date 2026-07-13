@@ -1,0 +1,24 @@
+{
+  "name": "holocron-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "start": "turbo start",
+    "seed": "node scripts/seed-template.mjs"
+  },
+  "devDependencies": {
+    "postgres": "^3.4.7",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@10.9.2"
+}

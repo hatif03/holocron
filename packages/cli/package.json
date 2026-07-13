@@ -1,0 +1,38 @@
+{
+  "name": "holocron",
+  "version": "0.1.0",
+  "description": "AI-native research platform — visual graph to publication-ready papers",
+  "bin": {
+    "holocron": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "assets",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts --clean",
+    "dev": "tsup src/index.ts --format cjs --watch"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "research",
+    "academic",
+    "ai-agents",
+    "latex",
+    "k2-think"
+  ],
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "commander": "^14.0.0",
+    "dotenv": "^16.5.0",
+    "ora": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3"
+  }
+}

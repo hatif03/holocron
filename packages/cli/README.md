@@ -18,7 +18,7 @@ npm install -g holocron
 
 ### `holocron start`
 
-Starts the full stack (Postgres, agents, LaTeX, web). On first run, runs `holocron setup` if `~/.holocron/.env` is missing. Waits for health endpoints and opens the browser at `http://localhost:3000`.
+Starts the full stack (Postgres, agents, LaTeX, **Supermemory Local**, web). On first run, runs `holocron setup` if `~/.holocron/.env` is missing. Captures the Supermemory `sm_*` API key on first boot. Waits for health endpoints and opens the browser at `http://localhost:3000`.
 
 ### `holocron setup`
 
@@ -33,11 +33,15 @@ Writes config to `~/.holocron/.env`.
 
 ### `holocron doctor`
 
-Checks Node.js 20+, Docker availability, and ports 3000 / 8000 / 5432.
+Checks Node.js 20+, Docker availability, and ports 3000 / 8000 / 5432 / **6767**.
 
 ### `holocron status`
 
-Prints service health summary.
+Prints service health summary including Supermemory and API key configuration.
+
+### Supermemory
+
+`holocron start` includes Supermemory Local (`localhost:6767`). Set `K2THINK_API_KEY` in `~/.holocron/.env` for memory extraction. See [docs/SUPERMEMORY.md](../../docs/SUPERMEMORY.md).
 
 ### `holocron stop`
 

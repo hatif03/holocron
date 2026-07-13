@@ -16,8 +16,12 @@ First run:
 
 1. Runs the setup wizard if `~/.holocron/.env` does not exist
 2. Prompts for an LLM provider (default: **K2 Think**) — press Enter for mock mode
-3. Starts Postgres, agents, LaTeX, and the web UI
+3. Starts Postgres, agents, LaTeX, **Supermemory Local**, and the web UI
 4. Waits for health checks and opens [http://localhost:3000](http://localhost:3000)
+
+### Persistent research memory
+
+Holocron uses [Supermemory Local](https://supermemory.ai/docs/self-hosting/overview) so agents remember prior plans, drafts, references, and preferences across paper generations — all on your machine at `localhost:6767`. See [docs/SUPERMEMORY.md](docs/SUPERMEMORY.md).
 
 ### CLI commands
 

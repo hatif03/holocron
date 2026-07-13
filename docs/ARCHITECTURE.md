@@ -17,12 +17,12 @@ Holocron is an npm workspaces monorepo. A Next.js web app provides the UI and pe
    │ :5432    │    │ agents :8000 │   │ STORAGE_PATH│
    └──────────┘    └──────┬───────┘   └─────────────┘
                             │
-              ┌─────────────┼─────────────┐
-              ▼             ▼             ▼
-        ┌──────────┐  ┌──────────┐  ┌──────────────┐
-        │ LLM BYOK │  │ Semantic │  │ LaTeX :8081  │
-        │ provider │  │ Scholar  │  │ compile svc  │
-        └──────────┘  └──────────┘  └──────────────┘
+              ┌─────────────┼─────────────┬───────────┐
+              ▼             ▼             ▼           ▼
+        ┌──────────┐  ┌──────────┐  ┌──────────┐ ┌──────────────┐
+        │ LLM BYOK │  │ Semantic │  │ LaTeX    │ │ Supermemory  │
+        │ provider │  │ Scholar  │  │ :8081    │ │ Local :6767  │
+        └──────────┘  └──────────┘  └──────────┘ └──────────────┘
 ```
 
 ## Packages
@@ -64,6 +64,7 @@ Auth is local-only: a seeded `LOCAL_USER` UUID; no login UI.
 - `src/llm.py` — multi-provider LLM client with mock fallback
 - `src/config.py` — settings, provider defaults, runtime `llm_config.json` override
 - `src/orchestrator/commander.py` — full paper generation pipeline
+- `src/supermemory_client.py` — Supermemory Local wrapper (profiles, search, add)
 - `src/agents/*` — planner, writer, reviewer, typesetter, metadata, VLM review, parsers
 
 **Config endpoints:**
@@ -92,6 +93,26 @@ Postgres schema (`db/migrations/`):
 - **paper_generations** — generation jobs, status, output paths, event log
 
 Files (PDFs, LaTeX, compiled output) live under `STORAGE_PATH`.
+
+## Memory layer (Supermemory Local)
+
+Holocron uses [Supermemory Local](https://supermemory.ai/docs/self-hosting/overview) as an **agent context layer** — not a replacement for Postgres.
+
+| Store | Holds | Used by |
+|-------|-------|---------|
+| Postgres | Works, references, generations, graph structure | UI CRUD, job tracking |
+| Supermemory | Extracted facts, profiles, PDF chunks, agent outputs | Planner, Writer, Commander prompts |
+
+**Why both:** Postgres answers "what is the current state of work X?" Supermemory answers "what did we learn about topic Y across all prior sessions on work X?" See [SUPERMEMORY.md](SUPERMEMORY.md) for the full rationale matrix.
+
+**Flow during generation:**
+
+1. Commander calls `profile` + `search` before planning/writing
+2. Planner/writer outputs are `add`ed to `work_{workId}` after each phase
+3. Reference PDFs are ingested via web API routes
+4. User preferences land in `user_{userId}` on settings save
+
+Supermemory runs in Docker on port `6767`. `npx holocron start` includes it in the release stack.
 
 ## Research graph
 

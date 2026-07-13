@@ -56,7 +56,19 @@ If the resolved API key is empty or `mock-key-for-dev`, agents return placeholde
 | `AGENTS_SERVICE_URL` | Web → agents (server-side) | `http://localhost:8000` |
 | `NEXT_PUBLIC_AGENTS_URL` | Browser → agents (if needed) | `http://localhost:8000` |
 | `LATEX_SERVICE_URL` | Agents → LaTeX compiler | `http://localhost:8081` |
+| `LATEX_SERVICE_URL` | Agents → LaTeX compiler | `http://localhost:8081` |
 | `AUTH_MODE` | `local` (only mode implemented) | `local` |
+
+## Supermemory Local
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SUPERMEMORY_API_URL` | Supermemory Local server URL | `http://localhost:6767` |
+| `SUPERMEMORY_API_KEY` | Bearer token from first container boot (`sm_...`) | — |
+
+Inside Docker, agents and web use `http://host.docker.internal:6767`. The Supermemory container reuses `K2THINK_*` as `OPENAI_*` for memory extraction.
+
+See [SUPERMEMORY.md](SUPERMEMORY.md) for integration rationale and setup.
 
 ## Changing settings at runtime
 

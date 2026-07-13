@@ -37,48 +37,26 @@ curl -X PATCH http://localhost:6767/v3/settings \
 
 ## Integration hook points
 
-### Python agents (primary)
+### Python agents (primary) — implemented
 
 | File | Hook |
 |------|------|
-| [`apps/agents/src/orchestrator/commander.py`](../../../apps/agents/src/orchestrator/commander.py) | `profile()` before pipeline; `add()` after each agent turn |
-| [`apps/agents/src/agents/planner.py`](../../../apps/agents/src/agents/planner.py) | Store Semantic Scholar findings + plan as documents |
-| [`apps/agents/src/agents/writer.py`](../../../apps/agents/src/agents/writer.py) | Retrieve relevant memories before drafting sections |
-| [`apps/agents/src/agents/reviewer.py`](../../../apps/agents/src/agents/reviewer.py) | Store review feedback for iterative improvement |
-| [`apps/agents/src/config.py`](../../../apps/agents/src/config.py) | Add `supermemory_api_url`, `supermemory_api_key` to Settings |
+| [`apps/agents/src/supermemory_client.py`](../../../apps/agents/src/supermemory_client.py) | `get_client()`, `context_for_work()`, `store_memory()`, `search_work()` |
+| [`apps/agents/src/orchestrator/commander.py`](../../../apps/agents/src/orchestrator/commander.py) | `profile()` at start; `add()` after planner/writer/reviewer; `search` before writer |
+| [`apps/agents/src/agents/planner.py`](../../../apps/agents/src/agents/planner.py) | `search_work()` before Semantic Scholar |
+| [`apps/agents/src/config.py`](../../../apps/agents/src/config.py) | `supermemory_api_url`, `supermemory_api_key` |
 
-Suggested Python helper (`apps/agents/src/supermemory_client.py`):
-
-```python
-from supermemory import Supermemory
-from .config import settings
-
-def get_client() -> Supermemory:
-    return Supermemory(
-        api_key=settings.supermemory_api_key,
-        base_url=settings.supermemory_api_url or "http://localhost:6767",
-    )
-
-async def context_for_work(work_id: str, query: str) -> str:
-    client = get_client()
-    result = client.profile(container_tag=f"work_{work_id}", q=query)
-    static = "\n".join(result.profile.static)
-    dynamic = "\n".join(result.profile.dynamic)
-    memories = ""
-    if result.search_results:
-        memories = "\n".join(r.memory for r in result.search_results.results if r.memory)
-    return f"Static:\n{static}\n\nDynamic:\n{dynamic}\n\nMemories:\n{memories}"
-```
-
-When running agents in Docker, use `SUPERMEMORY_API_URL=http://host.docker.internal:6767` so the container reaches the host-mapped port.
-
-### Next.js web
+### Next.js web — implemented
 
 | File | Hook |
 |------|------|
-| [`apps/web/src/lib/`](../../../apps/web/src/lib/) | New `supermemory-client.ts` — thin SDK wrapper |
-| [`apps/web/src/app/api/references/`](../../../apps/web/src/app/api/references/) | Ingest reference PDFs via `/v3/documents/file` |
-| [`apps/web/src/app/api/generations/`](../../../apps/web/src/app/api/generations/) | Store generation summaries after completion |
+| [`apps/web/src/lib/supermemory-client.ts`](../../../apps/web/src/lib/supermemory-client.ts) | `storeMemory()`, `ingestReferencePdf()`, `storeUserPreference()` |
+| [`apps/web/src/app/api/references/analyze/route.ts`](../../../apps/web/src/app/api/references/analyze/route.ts) | Store analysis when `work_id` provided |
+| [`apps/web/src/app/api/references/upload/route.ts`](../../../apps/web/src/app/api/references/upload/route.ts) | PDF ingest when `work_id` in form |
+| [`apps/web/src/app/api/works/[workId]/upload/route.ts`](../../../apps/web/src/app/api/works/[workId]/upload/route.ts) | Work-scoped PDF ingest |
+| [`apps/web/src/app/api/settings/llm/route.ts`](../../../apps/web/src/app/api/settings/llm/route.ts) | User preference on save |
+
+Full rationale: [docs/SUPERMEMORY.md](../../../docs/SUPERMEMORY.md)
 
 ### Reference PDF ingestion
 

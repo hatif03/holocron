@@ -20,22 +20,22 @@ import {
 import { Button } from "@/components/ui";
 
 const NODE_COLORS: Record<string, string> = {
-  start: "border-purple-400 bg-purple-50/80",
-  end: "border-purple-400 bg-purple-50/80",
-  idea: "border-amber-400 bg-amber-50/80",
-  question: "border-amber-400 bg-amber-50/80",
-  hypothesis: "border-amber-400 bg-amber-50/80",
-  literature: "border-blue-400 bg-blue-50/80",
-  concept: "border-blue-400 bg-blue-50/80",
-  method: "border-green-400 bg-green-50/80",
-  experiment: "border-green-400 bg-green-50/80",
-  metric: "border-green-400 bg-green-50/80",
-  data: "border-green-400 bg-green-50/80",
-  result: "border-orange-400 bg-orange-50/80",
-  finding: "border-orange-400 bg-orange-50/80",
-  figure: "border-orange-400 bg-orange-50/80",
-  table: "border-orange-400 bg-orange-50/80",
-  paper_section: "border-purple-400 bg-purple-50/80",
+  start: "border-primary/70 bg-primary/10",
+  end: "border-primary/70 bg-primary/10",
+  idea: "border-accent-yellow/60 bg-accent-yellow/10",
+  question: "border-accent-yellow/60 bg-accent-yellow/10",
+  hypothesis: "border-accent-yellow/60 bg-accent-yellow/10",
+  literature: "border-accent-cyan/60 bg-accent-cyan/10",
+  concept: "border-accent-cyan/60 bg-accent-cyan/10",
+  method: "border-emerald-400/60 bg-emerald-500/10",
+  experiment: "border-emerald-400/60 bg-emerald-500/10",
+  metric: "border-emerald-400/60 bg-emerald-500/10",
+  data: "border-emerald-400/60 bg-emerald-500/10",
+  result: "border-orange-400/60 bg-orange-500/10",
+  finding: "border-orange-400/60 bg-orange-500/10",
+  figure: "border-orange-400/60 bg-orange-500/10",
+  table: "border-orange-400/60 bg-orange-500/10",
+  paper_section: "border-primary/70 bg-primary/10",
 };
 
 const STATUS_LABELS: Record<NodeStatus, string> = {
@@ -48,7 +48,7 @@ function ResearchNode({ id, data, selected }: NodeProps) {
   const type = (data.nodeType as NodeType) || "idea";
   const label = (data.label as string) || getNodeTypeLabel(type);
   const status = ((data.status as NodeStatus) || "none") as NodeStatus;
-  const color = NODE_COLORS[type] || "border-gray-300 bg-white";
+  const color = NODE_COLORS[type] || "border-border bg-card";
   const workId = useCanvasStore((s) => s.workId);
   const openGenerateModal = useCanvasStore((s) => s.openGenerateModal);
 
@@ -91,7 +91,7 @@ function ResearchNode({ id, data, selected }: NodeProps) {
           <select
             value={status}
             onChange={onStatusChange}
-            className="text-[10px] rounded border border-border bg-white px-1 py-0.5"
+            className="text-[10px] rounded-sm border border-border bg-muted/60 px-1 py-0.5"
             onClick={(e) => e.stopPropagation()}
           >
             {(["none", "draft", "complete"] as NodeStatus[]).map((s) => (
@@ -113,7 +113,7 @@ function ResearchNode({ id, data, selected }: NodeProps) {
         <div className="flex-1 overflow-auto px-3 py-2">
           {type === "end" ? (
             <div className="space-y-2">
-              <div className="rounded bg-blue-50 border border-blue-200 px-2 py-1.5 text-[10px] text-blue-800">
+              <div className="rounded-sm bg-accent-cyan/10 border border-accent-cyan/30 px-2 py-1.5 text-[10px] text-accent-cyan">
                 {getNodeDescription("end")}
               </div>
               <NodeFieldRenderer

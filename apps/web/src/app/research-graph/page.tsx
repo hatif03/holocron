@@ -60,11 +60,11 @@ export default function ResearchGraphPage() {
       <div className="flex items-center gap-3 mb-8">
         <Network className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="font-display text-2xl font-bold text-accent-yellow tracking-wide uppercase">
+          <h1 className="text-2xl font-semibold tracking-tight">
             Research Graph
           </h1>
-          <p className="text-xs text-accent-cyan tracking-wider uppercase mt-0.5">
-            Map the knowledge lattice
+          <p className="text-sm text-muted-foreground mt-1">
+            Visual map of your research
           </p>
         </div>
       </div>

@@ -38,11 +38,11 @@ export default function PaperGenerationListPage() {
         <div className="flex items-center gap-3">
           <Box className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="font-display text-2xl font-bold text-accent-yellow tracking-wide uppercase">
+            <h1 className="text-2xl font-semibold tracking-tight">
               Paper Generation
             </h1>
-            <p className="text-xs text-accent-cyan tracking-wider uppercase mt-0.5">
-              Command the writing crew
+            <p className="text-sm text-muted-foreground mt-1">
+              Multi-agent paper pipeline
             </p>
           </div>
         </div>

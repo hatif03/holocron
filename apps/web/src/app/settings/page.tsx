@@ -142,11 +142,11 @@ export default function SettingsPage() {
       <div className="flex items-center gap-3 mb-8">
         <Settings className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="font-display text-2xl font-bold text-accent-yellow tracking-wide uppercase">
+          <h1 className="text-2xl font-semibold tracking-tight">
             Settings
           </h1>
-          <p className="text-xs text-accent-cyan tracking-wider uppercase mt-0.5">
-            Bring your own key
+          <p className="text-sm text-muted-foreground mt-1">
+            LLM provider and API keys
           </p>
         </div>
       </div>
@@ -165,13 +165,13 @@ export default function SettingsPage() {
 
         {config && (
           <div className="flex flex-wrap gap-2">
-            <Badge variant={config.mock_llm ? "yellow" : "cyan"}>
+            <Badge variant={config.mock_llm ? "warning" : "success"}>
               {config.mock_llm ? "Mock mode" : "Live key"}
             </Badge>
             {config.api_key_masked && (
               <Badge variant="default">Key {config.api_key_masked}</Badge>
             )}
-            {config.error && <Badge variant="yellow">Agents offline</Badge>}
+            {config.error && <Badge variant="warning">Agents offline</Badge>}
           </div>
         )}
 
@@ -225,7 +225,7 @@ export default function SettingsPage() {
         </div>
 
         {message && (
-          <p className="text-sm text-accent-cyan flex items-center gap-2">
+          <p className="text-sm text-success flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
             {message}
           </p>
@@ -240,7 +240,7 @@ export default function SettingsPage() {
 
       <p className="mt-6 text-xs text-muted-foreground">
         You can also configure providers from the CLI with{" "}
-        <code className="text-accent-cyan">holocron setup</code>. Empty keys
+        <code className="font-mono text-sm">holocron setup</code>. Empty keys
         enable mock mode for local tours without an API key.
       </p>
     </div>

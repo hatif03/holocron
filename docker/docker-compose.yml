@@ -23,9 +23,17 @@ services:
     ports:
       - "8000:8000"
     environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-k2think}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
       K2THINK_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
       K2THINK_BASE_URL: ${K2THINK_BASE_URL:-https://www.k2think.ai/api/chat/completions}
       K2THINK_MODEL: ${K2THINK_MODEL:-MBZUAI-IFM/K2-Think-v2}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       SEMANTIC_SCHOLAR_API_KEY: ${SEMANTIC_SCHOLAR_API_KEY:-}
       DATABASE_URL: postgresql://holocron:holocron@postgres:5432/holocron
       STORAGE_PATH: /data/storage

@@ -1,8 +1,12 @@
 from fastapi import FastAPI, BackgroundTasks, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uuid
+from typing import Optional
 
 from .registry import get_agent_health
+from .config import settings, PROVIDER_DEFAULTS
+from .llm import llm
 from .agents.planner import PlanRequest, plan_paper
 from .agents.writer import DraftRequest, draft_section
 from .agents.reviewer import ReviewRequest, review_section
@@ -31,10 +35,38 @@ app.add_middleware(
 _generation_jobs: dict[str, dict] = {}
 
 
+class LlmConfigUpdate(BaseModel):
+    provider: Optional[str] = None
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    model: Optional[str] = None
+
+
 @app.get("/health")
 async def health():
     return {"status": "online", "agents": get_agent_health()}
 
+
+@app.get("/config/llm")
+async def get_llm_config():
+    return settings.public_llm_info()
+
+
+@app.post("/config/llm")
+async def update_llm_config(body: LlmConfigUpdate):
+    provider = (body.provider or settings.resolved_provider()).lower()
+    if provider not in PROVIDER_DEFAULTS:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
+
+    payload = body.model_dump(exclude_none=True)
+    # Keep existing key if blank string sent (UI may omit re-entry)
+    if "api_key" in payload and payload["api_key"] == "":
+        del payload["api_key"]
+
+    settings.apply_llm_override(payload)
+    settings.persist_llm_override()
+    llm.reload()
+    return settings.public_llm_info()
 
 @app.post("/agents/planner/plan")
 async def planner_plan(req: PlanRequest):

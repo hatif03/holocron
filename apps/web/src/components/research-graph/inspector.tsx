@@ -49,7 +49,11 @@ export function NodeInspector({ node, onClose }: InspectorProps) {
     updateNodeData(node.id, { status: e.target.value });
   };
 
-  const figurePath = String(node.data?.figure_path || "");
+  const filePath =
+    type === "table"
+      ? String(node.data?.data_path || "")
+      : String(node.data?.figure_path || "");
+  const fileUrlKey = type === "table" ? "data_path_url" : "figure_path_url";
 
   return (
     <aside className="w-80 border-l border-border bg-card flex flex-col shrink-0">
@@ -99,12 +103,12 @@ export function NodeInspector({ node, onClose }: InspectorProps) {
           </div>
         )}
 
-        {(type === "figure" || type === "table") && figurePath && (
+        {(type === "figure" || type === "table") && filePath && (
           <FigurePreview
-            path={figurePath}
+            path={filePath}
             url={
-              node.data?.figure_path_url
-                ? String(node.data.figure_path_url)
+              node.data?.[fileUrlKey]
+                ? String(node.data[fileUrlKey])
                 : undefined
             }
             caption={String(node.data?.caption || "")}

@@ -4,21 +4,46 @@ import { getGenerationStatus } from "@/lib/agents-client";
 import fs from "fs";
 import path from "path";
 
+interface FileNode {
+  name: string;
+  path: string;
+  size: number;
+  type: "file" | "folder";
+  children?: FileNode[];
+}
+
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ genId: string }> }
 ) {
   try {
     const { genId } = await params;
+    const fileParam = req.nextUrl.searchParams.get("file");
     const db = getDb();
     const [gen] = await db`SELECT * FROM paper_generations WHERE id = ${genId}::uuid`;
     if (!gen) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const storagePath = process.env.STORAGE_PATH || "./storage";
+    const outputDir = gen.output_dir || path.join(storagePath, "generations", genId);
+
+    if (fileParam) {
+      const fullPath = path.resolve(outputDir, fileParam);
+      if (!fullPath.startsWith(path.resolve(outputDir))) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      if (!fs.existsSync(fullPath)) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+      const content = fs.readFileSync(fullPath, "utf-8");
+      const words = content.split(/\s+/).filter(Boolean).length;
+      return NextResponse.json({ content, words, path: fileParam });
+    }
 
     let agentStatus = null;
     try {
       agentStatus = await getGenerationStatus(genId);
     } catch {
-      /* agents may be offline */
+      /* agents offline */
     }
 
     if (agentStatus?.result && gen.status === "running") {
@@ -47,41 +72,106 @@ export async function GET(
           `;
         }
       }
+
+      const lastEv = agentStatus.events[agentStatus.events.length - 1];
+      const reviewCount = agentStatus.events.filter(
+        (e: { agent: string; event_type: string }) =>
+          e.agent === "Reviewer" && e.event_type === "completed"
+      ).length;
+
+      await db`
+        UPDATE paper_generations SET
+          current_step = ${lastEv.message},
+          review_count = ${reviewCount},
+          updated_at = NOW()
+        WHERE id = ${genId}::uuid
+      `;
     }
 
-    const updatedEvents = await db`
+    const [updatedGen] = await db`SELECT * FROM paper_generations WHERE id = ${genId}::uuid`;
+
+    const events = await db`
       SELECT * FROM generation_events WHERE generation_id = ${genId}::uuid
       ORDER BY created_at ASC
     `;
 
-    const storagePath = process.env.STORAGE_PATH || "./storage";
-    const outputDir = gen.output_dir || path.join(storagePath, "generations", genId);
-    let files: string[] = [];
+    const reviewCount =
+      updatedGen.review_count ||
+      events.filter(
+        (e: { agent: string; event_type: string }) =>
+          e.agent === "Reviewer" && e.event_type === "completed"
+      ).length;
+
+    let fileTree: FileNode[] = [];
     if (fs.existsSync(outputDir)) {
-      files = listFilesRecursive(outputDir);
+      fileTree = buildFileTree(outputDir);
     }
 
     return NextResponse.json({
-      generation: gen,
-      events: updatedEvents.length ? updatedEvents : agentStatus?.events || [],
-      agentStatus,
-      files,
+      generation: { ...updatedGen, review_count: reviewCount },
+      events: events.length ? events : agentStatus?.events || [],
+      fileTree,
+      outputDir: outputDir.replace(/\\/g, "/"),
     });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
 
-function listFilesRecursive(dir: string, base = dir): string[] {
-  const result: string[] = [];
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ genId: string }> }
+) {
+  try {
+    const { genId } = await params;
+    const db = getDb();
+    await db`DELETE FROM paper_generations WHERE id = ${genId}::uuid`;
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ genId: string }> }
+) {
+  try {
+    const { genId } = await params;
+    const { status } = await req.json();
+    const db = getDb();
+    await db`
+      UPDATE paper_generations SET status = ${status}, updated_at = NOW()
+      WHERE id = ${genId}::uuid
+    `;
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
+function buildFileTree(dir: string, base = dir): FileNode[] {
+  const nodes: FileNode[] = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    const rel = path.relative(base, full);
+    const rel = path.relative(base, full).replace(/\\/g, "/");
     if (entry.isDirectory()) {
-      result.push(...listFilesRecursive(full, base));
+      nodes.push({
+        name: entry.name,
+        path: rel,
+        size: 0,
+        type: "folder",
+        children: buildFileTree(full, base),
+      });
     } else {
-      result.push(rel.replace(/\\/g, "/"));
+      const stat = fs.statSync(full);
+      nodes.push({
+        name: entry.name,
+        path: rel,
+        size: stat.size,
+        type: "file",
+      });
     }
   }
-  return result;
+  return nodes;
 }

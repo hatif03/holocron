@@ -1,65 +1,76 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { FileText } from "lucide-react";
-import { Card, Badge } from "@/components/ui";
-import { formatDate } from "@/lib/utils";
-
-interface Generation {
-  id: string;
-  title: string;
-  work_title: string;
-  status: string;
-  word_count: number;
-  created_at: string;
-}
+import { Box, Plus, Search } from "lucide-react";
+import { Button, Input } from "@/components/ui";
+import { GenerationCard, type GenerationItem } from "@/components/paper-generation/GenerationCard";
+import { MetadataWizard } from "@/components/paper-generation/MetadataWizard";
 
 export default function PaperGenerationListPage() {
-  const [generations, setGenerations] = useState<Generation[]>([]);
+  const [generations, setGenerations] = useState<GenerationItem[]>([]);
+  const [search, setSearch] = useState("");
+  const [wizardOpen, setWizardOpen] = useState(false);
+
+  const load = async (q = "") => {
+    const url = q
+      ? `/api/generations?search=${encodeURIComponent(q)}`
+      : "/api/generations";
+    const res = await fetch(url);
+    const data = await res.json();
+    if (Array.isArray(data)) setGenerations(data);
+  };
 
   useEffect(() => {
-    fetch("/api/generations")
-      .then((r) => r.json())
-      .then((data) => Array.isArray(data) && setGenerations(data));
-  }, []);
+    load();
+    const interval = setInterval(() => load(search), 5000);
+    return () => clearInterval(interval);
+  }, [search]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this generation?")) return;
+    await fetch(`/api/generations/${id}`, { method: "DELETE" });
+    load(search);
+  };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="flex items-center gap-3 mb-8">
-        <FileText className="h-6 w-6 text-primary" />
-        <h1 className="font-serif text-2xl font-bold">Paper Generation</h1>
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Box className="h-6 w-6 text-primary" />
+          <h1 className="font-serif text-2xl font-bold">Paper Generation</h1>
+        </div>
+        <Button onClick={() => setWizardOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          New Paper
+        </Button>
+      </div>
+
+      <div className="flex gap-2 mb-6">
+        <Input
+          placeholder="Search tasks..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && load(search)}
+          className="flex-1"
+        />
+        <Button variant="outline" onClick={() => load(search)}>
+          <Search className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="grid gap-4">
         {generations.map((gen) => (
-          <Link key={gen.id} href={`/paper-generation/${gen.id}`}>
-            <Card className="p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold">{gen.title || gen.work_title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {gen.work_title}
-                  </p>
-                </div>
-                <Badge variant={gen.status === "completed" ? "success" : "default"}>
-                  {gen.status}
-                </Badge>
-              </div>
-              <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-                {gen.word_count > 0 && <span>{gen.word_count} words</span>}
-                <span>{formatDate(gen.created_at)}</span>
-              </div>
-            </Card>
-          </Link>
+          <GenerationCard key={gen.id} gen={gen} onDelete={() => handleDelete(gen.id)} />
         ))}
       </div>
 
       {generations.length === 0 && (
         <div className="text-center py-16 text-muted-foreground">
-          No paper generations yet. Build a research graph and click Generate Paper.
+          No paper generations yet. Click New Paper to start from metadata.
         </div>
       )}
+
+      <MetadataWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -66,15 +67,57 @@ async def run_generation(
 
     plan = None
     if enable_planning:
-        await _emit(on_event, "Planner", "writing", "PlannerAgent: Building outline and discovering references")
+        await _emit(
+            on_event,
+            "Planner",
+            "writing",
+            "Creating paper plan",
+            {"phase": "planning"},
+        )
+        t0 = time.perf_counter()
         plan_result = await plan_paper(PlanRequest(graph=req.graph))
+        elapsed_ms = int((time.perf_counter() - t0) * 1000)
         plan = plan_result.model_dump()
+
+        await _emit(
+            on_event,
+            "Planner",
+            "search",
+            f"Querying semantic_scholar: {plan_result.search_query[:80]}",
+            {
+                "phase": "reference_discovery",
+                "source": "semantic_scholar",
+                "search_query": plan_result.search_query,
+            },
+        )
+        await _emit(
+            on_event,
+            "Planner",
+            "found",
+            f"Found {len(plan_result.discovered_refs)} papers",
+            {
+                "phase": "reference_discovery",
+                "count": len(plan_result.discovered_refs),
+            },
+        )
+        await _emit(
+            on_event,
+            "Planner",
+            "llm",
+            "PlannerAgent generated response",
+            {"phase": "planning", "duration_ms": elapsed_ms},
+        )
         await _emit(
             on_event,
             "Planner",
             "completed",
             f"Plan created with {len(plan_result.sections)} sections",
-            {"search_query": plan_result.search_query, "refs": len(plan_result.discovered_refs)},
+            {
+                "phase": "planning",
+                "search_query": plan_result.search_query,
+                "refs": len(plan_result.discovered_refs),
+                "duration_ms": elapsed_ms,
+            },
         )
 
     sections = (plan or {}).get("sections") or [
@@ -90,8 +133,23 @@ async def run_generation(
     for section in sections:
         name = section.get("name", "Section")
         safe_name = name.replace(" ", "_")
-        await _emit(on_event, "Writer", "writing", f"WriterAgent: Generating {name} section")
+        phase = "introduction" if name.lower() == "introduction" else "body_sections"
+        await _emit(
+            on_event,
+            "Writer",
+            "writing",
+            f"Drafting {name}",
+            {"phase": phase, "section": name},
+        )
+        await _emit(
+            on_event,
+            "Writer",
+            "agent",
+            f"WriterAgent: Generating {name} section",
+            {"phase": phase, "section": name},
+        )
 
+        t0 = time.perf_counter()
         draft = await draft_section(
             DraftRequest(
                 section_name=name,
@@ -99,16 +157,37 @@ async def run_generation(
                 style_guide=style,
             )
         )
+        draft_ms = int((time.perf_counter() - t0) * 1000)
         content = draft.content
+
+        await _emit(
+            on_event,
+            "Writer",
+            "llm",
+            "WriterAgent generated response",
+            {"phase": phase, "section": name, "duration_ms": draft_ms},
+        )
 
         if enable_review:
             for i in range(max_reviews):
-                await _emit(on_event, "Reviewer", "agent", f"ReviewerAgent: Review round {i + 1} for {name}")
+                await _emit(
+                    on_event,
+                    "Reviewer",
+                    "agent",
+                    f"ReviewerAgent: Review round {i + 1} for {name}",
+                    {"phase": "review", "section": name},
+                )
                 review = await review_section(
                     ReviewRequest(section_name=name, content=content, style_guide=style)
                 )
                 if review.approved:
-                    await _emit(on_event, "Reviewer", "completed", f"Review passed for {name}")
+                    await _emit(
+                        on_event,
+                        "Reviewer",
+                        "completed",
+                        f"Review passed for {name}",
+                        {"phase": "review", "section": name},
+                    )
                     break
                 if review.revised_content:
                     content = review.revised_content
@@ -122,7 +201,7 @@ async def run_generation(
             "Writer",
             "completed",
             f"Generated {name} ({draft.word_count} words)",
-            {"word_count": draft.word_count},
+            {"phase": phase, "word_count": draft.word_count, "section": name},
         )
 
     # Write main.tex
@@ -134,7 +213,13 @@ async def run_generation(
     bib_path = output_dir / "references.bib"
     bib_path.write_text("@article{placeholder2024, title={Placeholder Reference}, year={2024}}\n")
 
-    await _emit(on_event, "Typesetter", "writing", "TypesetterAgent: Compiling LaTeX to PDF")
+    await _emit(
+        on_event,
+        "Typesetter",
+        "writing",
+        "TypesetterAgent: Compiling LaTeX to PDF",
+        {"phase": "typesetting"},
+    )
     compile_result = await compile_latex(
         CompileRequest(project_dir=str(output_dir), main_file="main.tex")
     )

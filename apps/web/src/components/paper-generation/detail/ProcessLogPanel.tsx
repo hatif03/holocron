@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui";
 import { LogEntry, type LogEvent } from "./LogEntry";
 
@@ -66,18 +66,15 @@ export function ProcessLogPanel({
 }: ProcessLogPanelProps) {
   const groups = groupEvents(events);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const glowing = isRunning || events.length === 0;
 
   return (
-    <Card className={`p-4 max-h-[calc(100vh-12rem)] overflow-y-auto ${glowing ? "thinking-glow" : ""}`}>
-      <h2 className="font-display text-sm font-semibold mb-3 text-accent-yellow tracking-wide uppercase">
-        Process Log
-      </h2>
+    <Card className="p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
+      <h2 className="font-medium text-sm mb-3">Process Log</h2>
       {events.length === 0 && (
         <div className="flex items-center gap-3 py-4">
-          <div className="h-8 w-8 rounded-sm border border-primary/60 bg-primary/20 holocron-pulse" />
+          <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
           <p className="text-sm text-muted-foreground">
-            Agents assembling the holocron…
+            Waiting for agent activity…
           </p>
         </div>
       )}

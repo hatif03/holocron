@@ -7,16 +7,22 @@ export async function GET(req: NextRequest) {
   try {
     const search = req.nextUrl.searchParams.get("search") || "";
     const db = getDb();
-    const rows = search
+    const pattern = search ? `%${search}%` : null;
+    const rows = pattern
       ? await db`
-          SELECT * FROM references_lib
-          WHERE user_id = ${LOCAL_USER}::uuid AND title ILIKE ${"%" + search + "%"}
-          ORDER BY created_at DESC
+          SELECT r.*,
+            (SELECT COUNT(*)::int FROM graph_nodes gn WHERE gn.data->>'reference_id' = r.id::text) AS linked_node_count
+          FROM references_lib r
+          WHERE r.user_id = ${LOCAL_USER}::uuid
+            AND (r.title ILIKE ${pattern} OR r.authors ILIKE ${pattern})
+          ORDER BY r.created_at DESC
         `
       : await db`
-          SELECT * FROM references_lib
-          WHERE user_id = ${LOCAL_USER}::uuid
-          ORDER BY created_at DESC
+          SELECT r.*,
+            (SELECT COUNT(*)::int FROM graph_nodes gn WHERE gn.data->>'reference_id' = r.id::text) AS linked_node_count
+          FROM references_lib r
+          WHERE r.user_id = ${LOCAL_USER}::uuid
+          ORDER BY r.created_at DESC
         `;
     return NextResponse.json(rows);
   } catch (e) {
@@ -29,11 +35,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const db = getDb();
     const [ref] = await db`
-      INSERT INTO references_lib (user_id, title, authors, year, bibtex, s2_paper_id, analysis)
+      INSERT INTO references_lib (
+        user_id, title, authors, year, bibtex, s2_paper_id,
+        pdf_storage_path, analysis, url, doi, notes, source
+      )
       VALUES (
         ${LOCAL_USER}::uuid, ${body.title}, ${body.authors || ""},
         ${body.year || null}, ${body.bibtex || ""}, ${body.s2_paper_id || null},
-        ${JSON.stringify(body.analysis || {})}::jsonb
+        ${body.pdf_storage_path || null},
+        ${JSON.stringify(body.analysis || {})}::jsonb,
+        ${body.url || ""}, ${body.doi || ""}, ${body.notes || ""},
+        ${body.source || "manual"}
       )
       RETURNING *
     `;

@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchSemanticScholar, analyzePaper } from "@/lib/agents-client";
+import { searchSemanticScholar, searchArxiv } from "@/lib/agents-client";
+import type { PaperSearchField, PaperSearchSource } from "@holocron/shared";
 
 export async function GET(req: NextRequest) {
-  const query = req.nextUrl.searchParams.get("q");
-  if (!query) return NextResponse.json({ data: [] });
-  const result = await searchSemanticScholar(query);
-  return NextResponse.json(result);
-}
+  const query = req.nextUrl.searchParams.get("q") || "";
+  const source = (req.nextUrl.searchParams.get("source") ||
+    "semantic_scholar") as PaperSearchSource;
+  const field = (req.nextUrl.searchParams.get("field") || "all") as PaperSearchField;
 
-export async function POST(req: NextRequest) {
-  const { text, file_path } = await req.json();
-  const analysis = await analyzePaper(text, file_path);
-  return NextResponse.json(analysis);
+  if (!query.trim()) return NextResponse.json({ data: [] });
+
+  if (source === "arxiv") {
+    return NextResponse.json(await searchArxiv(query, field));
+  }
+  return NextResponse.json(await searchSemanticScholar(query, field));
 }

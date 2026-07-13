@@ -21,28 +21,27 @@ npm run dev --workspace=web
 
 ## Stack
 
-- **Next.js 15** App Router
+- **Next.js 15** App Router with route groups `(marketing)` and `(app)`
 - **React 19**
-- **Tailwind CSS v4** — design tokens in `src/app/globals.css`
+- **shadcn/ui** (Radix) — components in `src/components/ui/`
+- **Tailwind CSS v4** — tweakcn theme tokens in `src/app/globals.css`
 - **@xyflow/react** — research graph canvas
 - **Zustand** — canvas state (`src/lib/canvas-store.ts`)
 - **postgres** — direct SQL (no ORM)
 
-Fonts: **Inter** (UI) and **JetBrains Mono** (logs, code, BibTeX) via `next/font/google`.
+Fonts: **Inter** (UI), **JetBrains Mono** (logs, code, BibTeX), and **Newsreader** (editorial home only) via `next/font/google`.
 
 ## Structure
 
 ```
 src/
-├── app/                    Routes and API handlers
-│   ├── api/                REST endpoints
-│   ├── research-graph/     Graph list + canvas
-│   ├── paper-generation/   Generation list + detail
-│   ├── references/         Reference library
-│   ├── agents/             Agent health page
-│   └── settings/           BYOK LLM config
-├── components/             UI primitives and feature components
-│   ├── ui.tsx              Button, Input, Card, Dialog, etc.
+├── app/
+│   ├── (marketing)/        Editorial home (no sidebar)
+│   ├── (app)/              Product routes with sidebar shell
+│   └── api/                REST endpoints
+├── components/
+│   ├── ui/                 shadcn components (button, card, dialog, sidebar, …)
+│   ├── layout/             AppShell, PageHeader, marketing header
 │   ├── research-graph/     Canvas, nodes, sidebar, fields
 │   └── paper-generation/   Wizard, detail panels
 └── lib/                    db, agents-client, utils, canvas-store
@@ -57,23 +56,21 @@ src/
 | `/api/generations` | Paper generation lifecycle |
 | `/api/settings/llm` | Proxy to agents LLM config |
 
-## Theming (Research Workbench)
+## Theming
 
-Dark mode is default. Neutral surfaces with a single blue accent — inspired by research tools like Elicit and Linear.
+**Light mode is the default.** Dark mode is available via the theme toggle in the sidebar footer (product routes) or marketing header (home).
 
-| Token | Dark | Light | Use |
-|-------|------|-------|-----|
-| `--color-background` | `#0f1117` | `#fafafa` | Page background |
-| `--color-card` | `#181b24` | `#ffffff` | Panels and cards |
-| `--color-primary` | `#2563eb` | `#1d4ed8` | Actions, links, active nav |
-| `--color-muted-foreground` | `#94a3b8` | `#64748b` | Secondary text |
-| `--color-success` | `#22c55e` | `#16a34a` | Success badges |
-| `--color-warning` | `#f59e0b` | `#d97706` | Warning badges |
-| `--color-info` | `#3b82f6` | `#2563eb` | Info badges |
+The UI uses a [tweakcn](https://tweakcn.com/) zinc-neutral palette with Holocron blue as primary. Product pages follow the Minimal UI Kit shell pattern (sidebar + page header + card lists). The marketing home uses an editorial layout with serif accents.
 
-Graph nodes use semantic category colors (violet control, amber ideation, blue knowledge, emerald execution, orange evidence).
+| Token | Use |
+|-------|-----|
+| `--background` / `--foreground` | Page surfaces and text |
+| `--primary` | Actions, links, active nav |
+| `--muted` / `--muted-foreground` | Secondary surfaces and text |
+| `--sidebar-*` | App shell sidebar |
+| `--success` / `--warning` / `--info` | Semantic badges |
 
-Toggle light/dark via the navbar theme switch.
+Graph nodes keep semantic category colors (violet control, amber ideation, blue knowledge, emerald execution, orange evidence). React Flow background dots align to `--border` in both themes.
 
 ## Environment
 

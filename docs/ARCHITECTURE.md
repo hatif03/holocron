@@ -38,9 +38,9 @@ Turbo orchestrates `dev`, `build`, and `lint` across workspaces.
 
 ## Web application
 
-**Stack:** Next.js 15, React 19, Tailwind CSS v4, `@xyflow/react` (graph canvas), Zustand (canvas state).
+**Stack:** Next.js 15, React 19, shadcn/ui (Radix), Tailwind CSS v4 with tweakcn tokens, `@xyflow/react` (graph canvas), Zustand (canvas state).
 
-The UI uses a **Research Workbench** design system: neutral dark/light surfaces, Inter + JetBrains Mono typography, a single blue accent, and semantic colors on graph nodes for category distinction.
+The UI uses a **Minimal UI Kit** product shell (collapsible sidebar, page headers, card lists) with an editorial marketing home. **Light mode is the default**; dark mode toggles via `next-themes`. Typography: Inter + JetBrains Mono app-wide; Newsreader serif accents on the home page only. Graph nodes retain semantic category colors for research semantics.
 
 **Pages:**
 

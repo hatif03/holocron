@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Navbar } from "@/components/navbar";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -14,6 +15,12 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-newsreader",
   display: "swap",
 });
 
@@ -33,20 +40,24 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   const fontVars = {
-    "--font-body": "var(--font-inter), system-ui, sans-serif",
+    "--font-sans": "var(--font-inter), system-ui, sans-serif",
     "--font-mono": "var(--font-jetbrains-mono), ui-monospace, monospace",
-    "--font-serif": "var(--font-inter), system-ui, sans-serif",
+    "--font-serif": "var(--font-newsreader), Georgia, serif",
   } as CSSProperties;
 
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen antialiased`}
+        className={cn(
+          inter.variable,
+          jetbrainsMono.variable,
+          newsreader.variable,
+          "min-h-screen antialiased"
+        )}
         style={fontVars}
       >
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <Navbar />
-          <main className="page-enter">{children}</main>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

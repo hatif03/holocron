@@ -65,17 +65,17 @@ export function GenerationHeader({ gen, genId, onCancel }: GenerationHeaderProps
         )}
         {pdfUrl && (
           <>
-            <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 h-10 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
-              <ExternalLink className="h-4 w-4" />
-              View PDF
-            </a>
-            <a
-              href={pdfUrl}
-              download
-              className="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-border hover:bg-muted"
-            >
-              <Download className="h-4 w-4" />
-            </a>
+            <Button asChild>
+              <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+                View PDF
+              </a>
+            </Button>
+            <Button variant="outline" size="icon" asChild>
+              <a href={pdfUrl} download>
+                <Download className="h-4 w-4" />
+              </a>
+            </Button>
           </>
         )}
       </div>

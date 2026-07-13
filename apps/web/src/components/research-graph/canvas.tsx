@@ -229,8 +229,8 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+    <div className="flex h-[calc(100vh-3rem)] flex-col">
+      <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="font-serif text-xl font-bold">{initialWork.title}</h1>
@@ -278,7 +278,7 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
             fitView
             className="bg-muted/30 flex-1"
           >
-            <Background gap={16} size={1} />
+            <Background gap={16} size={1} color="var(--border)" />
             <MiniMap className="!bottom-16" />
           </ReactFlow>
 

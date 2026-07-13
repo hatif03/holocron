@@ -174,3 +174,13 @@
 .react-flow__node {
   font-size: 12px;
 }
+
+.react-flow__background pattern circle {
+  fill: var(--border);
+}
+
+.react-flow__minimap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}

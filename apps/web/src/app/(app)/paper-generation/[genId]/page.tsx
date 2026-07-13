@@ -90,10 +90,10 @@ export default function PaperGenerationDetailPage({
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
+    <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-[1600px] flex-col px-4 py-4 sm:px-6">
       <GenerationHeader gen={gen} genId={genId} onCancel={cancel} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         <ProcessLogPanel
           events={events}
           selectedEventIndex={selectedEventIndex}

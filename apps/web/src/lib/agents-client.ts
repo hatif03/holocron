@@ -144,3 +144,29 @@ export async function fetchAgentsHealth() {
   if (!res.ok) throw new Error("Agents service unavailable");
   return res.json();
 }
+
+export async function fetchLlmConfig() {
+  const res = await fetch(`${getAgentsUrl()}/config/llm`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error("Failed to load LLM config");
+  return res.json();
+}
+
+export async function updateLlmConfig(body: {
+  provider?: string;
+  api_key?: string;
+  base_url?: string;
+  model?: string;
+}) {
+  const res = await fetch(`${getAgentsUrl()}/config/llm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(detail || `Failed to update LLM config (${res.status})`);
+  }
+  return res.json();
+}

@@ -11,3 +11,4 @@ pillow>=11.2.0
 psycopg2-binary>=2.9.10
 sqlalchemy>=2.0.41
 aiofiles>=24.1.0
+supermemory>=1.0.0

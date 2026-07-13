@@ -21,6 +21,7 @@ from .agents.typesetter import (
 from .agents.metadata import MetadataRequest, generate_from_metadata
 from .agents.vlm_review import VlmPageRequest, VlmReviewRequest, VlmFixRequest, analyze_page, review_pdf, suggest_fixes
 from .orchestrator.commander import GenerateRequest, run_generation
+from .supermemory_client import configure_settings_once, health_status
 
 app = FastAPI(title="Holocron Agent Service", version="0.1.0")
 
@@ -42,9 +43,15 @@ class LlmConfigUpdate(BaseModel):
     model: Optional[str] = None
 
 
+@app.on_event("startup")
+async def startup():
+    await configure_settings_once()
+
+
 @app.get("/health")
 async def health():
-    return {"status": "online", "agents": get_agent_health()}
+    sm = await health_status()
+    return {"status": "online", "agents": get_agent_health(), "supermemory": sm}
 
 
 @app.get("/config/llm")

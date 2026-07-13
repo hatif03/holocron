@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     latex_service_url: str = "http://localhost:8081"
     mock_llm: bool = False
 
+    supermemory_api_url: str = "http://localhost:6767"
+    supermemory_api_key: str = ""
+
     class Config:
         env_file = ".env"
         extra = "ignore"

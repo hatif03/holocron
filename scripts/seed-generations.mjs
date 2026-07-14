@@ -1,112 +1,211 @@
 #!/usr/bin/env node
 /**
- * Seed demo paper generations with events for UI testing.
+ * Seed demo paper generations — one completed generation per research work topic.
  * Usage: node scripts/seed-generations.mjs [--force]
  */
 import postgres from "postgres";
 import fs from "fs";
 import path from "path";
+import {
+  writeMinimalPdf,
+  STORAGE_PATH,
+} from "./seed-utils.mjs";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ||
   "postgresql://holocron:holocron@localhost:5432/holocron";
 
-const STORAGE = process.env.STORAGE_PATH || "./storage";
-const LOCAL_USER = "00000000-0000-0000-0000-000000000001";
+const STORAGE = STORAGE_PATH;
 const force = process.argv.includes("--force");
+
+const DEMO_REFS = [
+  {
+    paperId: "demo1",
+    title: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    year: 2020,
+    authors: ["Patrick Lewis", "Ethan Perez"],
+    abstract: "We combine parametric and non-parametric memories for language generation.",
+    source: "semantic_scholar",
+  },
+  {
+    paperId: "demo2",
+    title: "Language Models are Few-Shot Learners",
+    year: 2020,
+    authors: ["Tom B. Brown"],
+    abstract: "GPT-3 demonstrates strong few-shot performance across NLP benchmarks.",
+    source: "semantic_scholar",
+  },
+];
+
+function writeGenerationArtifacts(genId, title) {
+  const outDir = path.join(STORAGE, "generations", genId);
+  const sectionsDir = path.join(outDir, "sections");
+  fs.mkdirSync(sectionsDir, { recursive: true });
+
+  const sections = ["Abstract", "Introduction", "Methods", "Results", "Discussion"];
+  for (const name of sections) {
+    const words = name === "Abstract" ? 180 : 900;
+    const body = Array(Math.ceil(words / 15))
+      .fill(
+        `${title}: evidence from the research graph supports rigorous methodology and reproducible findings. `
+      )
+      .join("");
+    fs.writeFileSync(
+      path.join(sectionsDir, `${name}.tex`),
+      name === "Abstract"
+        ? `\\begin{abstract}\n${body.trim()}\n\\end{abstract}\n`
+        : `\\section{${name}}\n${body.trim()}\n`
+    );
+  }
+
+  fs.writeFileSync(
+    path.join(outDir, "main.tex"),
+    [
+      "\\documentclass{article}",
+      "\\begin{document}",
+      ...sections.map((s) => `\\input{sections/${s}.tex}`),
+      "\\end{document}",
+    ].join("\n") + "\n"
+  );
+  fs.writeFileSync(
+    path.join(outDir, "references.bib"),
+    "@article{lewis2020rag, title={RAG for Knowledge-Intensive NLP}, year={2020}}\n"
+  );
+  writeMinimalPdf(path.join(outDir, "main.pdf"), title);
+}
 
 async function seed() {
   const sql = postgres(DATABASE_URL);
 
-  const [work] = await sql`
-    SELECT id FROM research_works WHERE is_template = true LIMIT 1
+  const works = await sql`
+    SELECT id, title, is_template
+    FROM research_works
+    ORDER BY is_template DESC, created_at ASC
   `;
-  if (!work) {
-    console.log("No template work found. Run seed-template.mjs first.");
+
+  if (!works.length) {
+    console.log("No works found. Run seed-works.mjs first.");
     await sql.end();
     return;
   }
 
   if (force) {
-    await sql`DELETE FROM paper_generations WHERE work_id = ${work.id}::uuid`;
+    const ids = works.map((w) => w.id);
+    await sql`DELETE FROM paper_generations WHERE work_id = ANY(${ids}::uuid[])`;
   }
 
-  const existing = await sql`
-    SELECT COUNT(*)::int AS c FROM paper_generations WHERE work_id = ${work.id}::uuid
-  `;
-  if (!force && existing[0].c > 0) {
-    console.log("Generations already seeded. Use --force to re-seed.");
-    await sql.end();
-    return;
-  }
+  const seeded = [];
 
-  const completedId = crypto.randomUUID();
-  const runningId = crypto.randomUUID();
-
-  await sql`
-    INSERT INTO paper_generations (id, work_id, status, config, title, source, word_count, review_count, current_step, pdf_path)
-    VALUES (
-      ${completedId}::uuid, ${work.id}::uuid, 'completed',
-      ${JSON.stringify({ styleGuide: "Nature", targetPages: 10 })}::jsonb,
-      'Artificial intelligence tools expand scientists impact but contract science focus',
-      'graph', 7483, 1, 'Completed',
-      ${path.join(STORAGE, "generations", completedId, "main.pdf")}
-    )
-  `;
-
-  await sql`
-    INSERT INTO paper_generations (id, work_id, status, config, title, source, current_step)
-    VALUES (
-      ${runningId}::uuid, ${work.id}::uuid, 'running',
-      ${JSON.stringify({ styleGuide: "Nature" })}::jsonb,
-      'AI tools expand impact but contract focus',
-      'graph', 'Planning: Creating paper plan'
-    )
-  `;
-
-  const events = [
-    { agent: "Planner", event_type: "writing", message: "Creating paper plan", metadata: { phase: "planning" } },
-    { agent: "Planner", event_type: "search", message: "Querying semantic_scholar: impact of artificial intelligence on scientific discovery", metadata: { phase: "reference_discovery", search_query: "impact of artificial intelligence on scientific discovery diversity", source: "semantic_scholar" } },
-    { agent: "Planner", event_type: "found", message: "Found 12 papers", metadata: { phase: "reference_discovery", count: 12 } },
-    { agent: "Planner", event_type: "llm", message: "PlannerAgent generated response", metadata: { phase: "planning", duration_ms: 18900 } },
-    { agent: "Planner", event_type: "completed", message: "Plan created with 5 sections", metadata: { phase: "planning", duration_ms: 21000 } },
-    { agent: "Writer", event_type: "writing", message: "Drafting Introduction", metadata: { phase: "introduction" } },
-    { agent: "Writer", event_type: "agent", message: "WriterAgent: Generating Introduction section", metadata: { phase: "introduction" } },
-    { agent: "Writer", event_type: "llm", message: "WriterAgent generated response", metadata: { phase: "introduction", duration_ms: 10200 } },
-    { agent: "Writer", event_type: "completed", message: "Generated Introduction (916 words)", metadata: { phase: "introduction", word_count: 916 } },
-    { agent: "Reviewer", event_type: "completed", message: "Review passed for Introduction", metadata: { phase: "review" } },
-  ];
-
-  for (const ev of events) {
-    await sql`
-      INSERT INTO generation_events (generation_id, agent, event_type, message, metadata)
-      VALUES (${completedId}::uuid, ${ev.agent}, ${ev.event_type}, ${ev.message}, ${JSON.stringify(ev.metadata)}::jsonb)
+  for (const work of works) {
+    const existing = await sql`
+      SELECT id FROM paper_generations WHERE work_id = ${work.id}::uuid LIMIT 1
     `;
+    if (!force && existing.length) {
+      console.log(`Skip (exists): ${work.title}`);
+      continue;
+    }
+
+    const genId = crypto.randomUUID();
+    const wordCount = 5200 + Math.floor(Math.random() * 1200);
+    const pdfPath = path.join(STORAGE, "generations", genId, "main.pdf");
+
+    await sql`
+      INSERT INTO paper_generations (
+        id, work_id, status, config, title, source, word_count, review_count, current_step, pdf_path, output_dir
+      )
+      VALUES (
+        ${genId}::uuid,
+        ${work.id}::uuid,
+        'completed',
+        ${JSON.stringify({ styleGuide: "Nature", targetPages: 10, enablePlanning: true })}::jsonb,
+        ${work.title},
+        'graph',
+        ${wordCount},
+        5,
+        'Completed',
+        ${pdfPath},
+        ${path.join(STORAGE, "generations", genId)}
+      )
+    `;
+
+    const events = [
+      {
+        agent: "Supermemory",
+        event_type: "memory",
+        message: `Profiled work memory (1240 chars context)`,
+        metadata: {
+          phase: "planning",
+          action: "profile",
+          preview: `Prior graph context for "${work.title}"`.slice(0, 500),
+          containerTag: `work_${work.id}`,
+        },
+      },
+      {
+        agent: "Planner",
+        event_type: "writing",
+        message: "Creating paper plan",
+        metadata: { phase: "planning", workflow_stage: "planning" },
+      },
+      {
+        agent: "Planner",
+        event_type: "search",
+        message: `Querying semantic_scholar: ${work.title.slice(0, 60)}`,
+        metadata: {
+          phase: "reference_discovery",
+          search_query: work.title,
+          source: "semantic_scholar",
+        },
+      },
+      {
+        agent: "Planner",
+        event_type: "found",
+        message: "Found 8 papers",
+        metadata: {
+          phase: "reference_discovery",
+          count: 8,
+          discovered_refs: DEMO_REFS,
+          source: "semantic_scholar",
+        },
+      },
+      {
+        agent: "Planner",
+        event_type: "completed",
+        message: "Plan created with 5 sections",
+        metadata: { phase: "planning", duration_ms: 21000, refs: 8 },
+      },
+      {
+        agent: "Writer",
+        event_type: "completed",
+        message: "Generated Introduction (916 words)",
+        metadata: { phase: "introduction", word_count: 916, section: "Introduction" },
+      },
+      {
+        agent: "Reviewer",
+        event_type: "completed",
+        message: "Review passed for Introduction",
+        metadata: { phase: "review", section: "Introduction" },
+      },
+      {
+        agent: "Commander",
+        event_type: "completed",
+        message: `Paper generation complete (${wordCount} words total)`,
+        metadata: { workflow_stage: "complete", word_count: wordCount },
+      },
+    ];
+
+    for (const ev of events) {
+      await sql`
+        INSERT INTO generation_events (generation_id, agent, event_type, message, metadata)
+        VALUES (${genId}::uuid, ${ev.agent}, ${ev.event_type}, ${ev.message}, ${JSON.stringify(ev.metadata)}::jsonb)
+      `;
+    }
+
+    writeGenerationArtifacts(genId, work.title);
+    seeded.push({ genId, title: work.title });
+    console.log(`Seeded generation: ${work.title} → ${genId}`);
   }
 
-  const outDir = path.join(STORAGE, "generations", completedId);
-  const sectionsDir = path.join(outDir, "sections");
-  fs.mkdirSync(sectionsDir, { recursive: true });
-
-  fs.writeFileSync(
-    path.join(sectionsDir, "Abstract.tex"),
-    "\\begin{abstract}\nAI tools expand individual scientist impact but contract collective research diversity.\n\\end{abstract}\n"
-  );
-  fs.writeFileSync(
-    path.join(sectionsDir, "Introduction.tex"),
-    "\\section{Introduction}\nArtificial intelligence is transforming scientific research at unprecedented scale.\n"
-  );
-  fs.writeFileSync(
-    path.join(outDir, "main.tex"),
-    "\\documentclass{article}\n\\begin{document}\n\\input{sections/Abstract.tex}\n\\input{sections/Introduction.tex}\n\\end{document}\n"
-  );
-  fs.writeFileSync(
-    path.join(outDir, "references.bib"),
-    "@article{example2024, title={Example Reference}, year={2024}}\n"
-  );
-  fs.writeFileSync(path.join(outDir, "main.pdf"), "%PDF-1.4 demo placeholder");
-
-  console.log("Seeded generations:", completedId, runningId);
+  console.log(`Done. ${seeded.length} generation(s) seeded.`);
   await sql.end();
 }
 

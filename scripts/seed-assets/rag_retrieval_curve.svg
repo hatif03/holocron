@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="280" viewBox="0 0 480 280">
+  <rect width="100%" height="100%" fill="#fafafa"/>
+  <text x="240" y="22" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="600">Citation F1 vs Memory Recall Rate</text>
+  <line x1="48" y1="240" x2="464" y2="240" stroke="#ccc"/>
+  <line x1="48" y1="36" x2="48" y2="240" stroke="#ccc"/>
+  <polyline fill="none" stroke="#059669" stroke-width="2.5" points="48,240 110.39999999999998,213.48000000000002 172.8,195.12 235.20000000000002,180.84 297.6,170.64 360,166.56"/>
+  <circle cx="48" cy="240" r="4" fill="#059669"/>
+  <circle cx="110.39999999999998" cy="213.48000000000002" r="4" fill="#059669"/>
+  <circle cx="172.8" cy="195.12" r="4" fill="#059669"/>
+  <circle cx="235.20000000000002" cy="180.84" r="4" fill="#059669"/>
+  <circle cx="297.6" cy="170.64" r="4" fill="#059669"/>
+  <circle cx="360" cy="166.56" r="4" fill="#059669"/>
+  <text x="240" y="272" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#666">Memory recall rate</text>
+  <text x="12" y="140" transform="rotate(-90 12 140)" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#666">Citation F1</text>
+</svg>

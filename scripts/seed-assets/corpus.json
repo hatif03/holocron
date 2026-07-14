@@ -1,0 +1,6 @@
+{
+  "name": "ML-for-science benchmark corpus",
+  "papers": 50,
+  "domains": ["NLP", "computer vision", "materials", "biology"],
+  "avg_citations_per_survey": 42.3
+}

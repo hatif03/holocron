@@ -6,6 +6,14 @@
  * Usage: node scripts/seed-template.mjs [--force]
  */
 import postgres from "postgres";
+import {
+  copyAssetToWork,
+  syncWorkReferences,
+  ingestGraphMemory,
+  resolveRefForNode,
+  linkLiteraturePdf,
+  assertWorkRefCount,
+} from "./seed-utils.mjs";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ||
@@ -59,11 +67,26 @@ const nodes = [
     x: 300,
     y: 380,
     data: {
-      status: "draft",
-      bibtex: "@article{example2024,\n  title={Research diversity in AI era},\n  author={Smith, J.},\n  year={2024}\n}",
-      user_notes: "Key prior work on research diversity",
+      status: "complete",
+      bibtex: "",
+      user_notes: "Key prior work on research diversity and AI-assisted science.",
       file_path: "",
     },
+    refIndex: 0,
+  },
+  {
+    key: "literature_2",
+    type: "literature",
+    label: "AI-Assisted Science Survey",
+    x: 300,
+    y: 520,
+    data: {
+      status: "complete",
+      bibtex: "",
+      user_notes: "Survey of AI adoption patterns in scientific workflows.",
+      file_path: "",
+    },
+    refIndex: 1,
   },
   {
     key: "method_1",
@@ -194,6 +217,9 @@ const edges = [
   ["start_1", "idea_1"],
   ["idea_1", "hypothesis_1"],
   ["idea_1", "literature_1"],
+  ["idea_1", "literature_2"],
+  ["literature_1", "method_1"],
+  ["literature_2", "method_1"],
   ["hypothesis_1", "method_1"],
   ["literature_1", "method_1"],
   ["method_1", "data_1"],
@@ -214,6 +240,13 @@ const edges = [
 
 async function seed() {
   const sql = postgres(DATABASE_URL);
+
+  const refs = await sql`
+    SELECT id, title, bibtex, url FROM references_lib
+    WHERE user_id = ${LOCAL_USER}::uuid
+    ORDER BY created_at ASC
+    LIMIT 12
+  `;
 
   const existing = await sql`
     SELECT id FROM research_works WHERE title = 'AI tools expand impact but contract focus' LIMIT 1
@@ -247,14 +280,42 @@ async function seed() {
     workId = work.id;
   }
 
+  const assetMap = {
+    data_1: "openalex_sample.csv",
+    figure_1: "tpl_fig1.svg",
+    figure_2: "tpl_fig2.svg",
+    figure_3: "tpl_fig3.svg",
+    figure_4: "tpl_fig4.svg",
+  };
+
+  const workTitle = "AI tools expand impact but contract focus";
+  const seededNodes = [];
   for (const n of nodes) {
+    const { data, ref } = resolveRefForNode(n, refs, workTitle);
+    const asset = assetMap[n.key];
+    if (asset) {
+      const uploaded = copyAssetToWork(workId, asset);
+      if (uploaded) {
+        if (n.type === "figure") {
+          data.figure_path = uploaded.path;
+          data.figure_path_url = uploaded.url;
+        } else if (n.type === "data") {
+          data.file_path = uploaded.path;
+          data.file_path_url = uploaded.url;
+        }
+      }
+    }
+    seededNodes.push({ ...n, data });
     await sql`
       INSERT INTO graph_nodes (work_id, node_key, type, label, position_x, position_y, data)
       VALUES (
         ${workId}::uuid, ${n.key}, ${n.type}, ${n.label}, ${n.x}, ${n.y},
-        ${JSON.stringify(n.data)}::jsonb
+        ${sql.json(data)}
       )
     `;
+    if (n.type === "literature" && ref) {
+      await linkLiteraturePdf(sql, workId, n.key, ref);
+    }
   }
 
   for (let i = 0; i < edges.length; i++) {
@@ -264,6 +325,10 @@ async function seed() {
       VALUES (${workId}::uuid, ${`e${i + 1}`}, ${source}, ${target})
     `;
   }
+
+  await syncWorkReferences(sql, workId, seededNodes);
+  await assertWorkRefCount(sql, workId, workTitle, 1);
+  await ingestGraphMemory(workId, workTitle, nodes.length, edges.length);
 
   console.log("Seeded template work:", workId, `(${nodes.length} nodes, ${edges.length} edges)`);
   await sql.end();

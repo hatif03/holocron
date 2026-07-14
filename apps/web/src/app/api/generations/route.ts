@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { startGeneration } from "@/lib/agents-client";
-import { buildGraphFromMetadata } from "@holocron/shared";
+import { buildGraphFromMetadata, LOCAL_USER_ID } from "@holocron/shared";
 import { v4 as uuidv4 } from "uuid";
-
-const LOCAL_USER = "00000000-0000-0000-0000-000000000001";
 
 export async function GET(req: NextRequest) {
   try {
@@ -49,7 +47,7 @@ export async function POST(req: NextRequest) {
 
       const [work] = await db`
         INSERT INTO research_works (user_id, title, description)
-        VALUES (${LOCAL_USER}::uuid, ${title}, ${metadata.idea.slice(0, 200)})
+        VALUES (${LOCAL_USER_ID}::uuid, ${title}, ${metadata.idea.slice(0, 200)})
         RETURNING id
       `;
       workId = work.id;

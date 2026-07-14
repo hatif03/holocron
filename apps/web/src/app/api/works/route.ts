@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-
-const LOCAL_USER = "00000000-0000-0000-0000-000000000001";
+import { LOCAL_USER_ID } from "@holocron/shared";
 
 export async function GET(req: NextRequest) {
   try {
@@ -37,7 +36,7 @@ export async function POST(req: NextRequest) {
     const db = getDb();
     const [work] = await db`
       INSERT INTO research_works (user_id, title, description)
-      VALUES (${LOCAL_USER}::uuid, ${title}, ${description || ""})
+      VALUES (${LOCAL_USER_ID}::uuid, ${title}, ${description || ""})
       RETURNING *
     `;
     return NextResponse.json(work);

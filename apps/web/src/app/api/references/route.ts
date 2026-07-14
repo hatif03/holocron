@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-
-const LOCAL_USER = "00000000-0000-0000-0000-000000000001";
+import { LOCAL_USER_ID } from "@holocron/shared";
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,7 +12,7 @@ export async function GET(req: NextRequest) {
           SELECT r.*,
             (SELECT COUNT(*)::int FROM graph_nodes gn WHERE gn.data->>'reference_id' = r.id::text) AS linked_node_count
           FROM references_lib r
-          WHERE r.user_id = ${LOCAL_USER}::uuid
+          WHERE r.user_id = ${LOCAL_USER_ID}::uuid
             AND (r.title ILIKE ${pattern} OR r.authors ILIKE ${pattern})
           ORDER BY r.created_at DESC
         `
@@ -21,7 +20,7 @@ export async function GET(req: NextRequest) {
           SELECT r.*,
             (SELECT COUNT(*)::int FROM graph_nodes gn WHERE gn.data->>'reference_id' = r.id::text) AS linked_node_count
           FROM references_lib r
-          WHERE r.user_id = ${LOCAL_USER}::uuid
+          WHERE r.user_id = ${LOCAL_USER_ID}::uuid
           ORDER BY r.created_at DESC
         `;
     return NextResponse.json(rows);
@@ -40,7 +39,7 @@ export async function POST(req: NextRequest) {
         pdf_storage_path, analysis, url, doi, notes, source
       )
       VALUES (
-        ${LOCAL_USER}::uuid, ${body.title}, ${body.authors || ""},
+        ${LOCAL_USER_ID}::uuid, ${body.title}, ${body.authors || ""},
         ${body.year || null}, ${body.bibtex || ""}, ${body.s2_paper_id || null},
         ${body.pdf_storage_path || null},
         ${JSON.stringify(body.analysis || {})}::jsonb,

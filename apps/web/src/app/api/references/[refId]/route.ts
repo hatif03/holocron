@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-
-const LOCAL_USER = "00000000-0000-0000-0000-000000000001";
+import { LOCAL_USER_ID } from "@holocron/shared";
 
 export async function GET(
   _req: NextRequest,
@@ -14,7 +13,7 @@ export async function GET(
       SELECT r.*,
         (SELECT COUNT(*)::int FROM graph_nodes gn WHERE gn.data->>'reference_id' = r.id::text) AS linked_node_count
       FROM references_lib r
-      WHERE r.id = ${refId}::uuid AND r.user_id = ${LOCAL_USER}::uuid
+      WHERE r.id = ${refId}::uuid AND r.user_id = ${LOCAL_USER_ID}::uuid
     `;
     if (!ref) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(ref);
@@ -43,7 +42,7 @@ export async function PATCH(
         source = COALESCE(${body.source}, source),
         analysis = COALESCE(${body.analysis ? JSON.stringify(body.analysis) : null}::jsonb, analysis),
         pdf_storage_path = COALESCE(${body.pdf_storage_path}, pdf_storage_path)
-      WHERE id = ${refId}::uuid AND user_id = ${LOCAL_USER}::uuid
+      WHERE id = ${refId}::uuid AND user_id = ${LOCAL_USER_ID}::uuid
       RETURNING *
     `;
     if (!ref) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -60,7 +59,7 @@ export async function DELETE(
   try {
     const { refId } = await params;
     const db = getDb();
-    await db`DELETE FROM references_lib WHERE id = ${refId}::uuid AND user_id = ${LOCAL_USER}::uuid`;
+    await db`DELETE FROM references_lib WHERE id = ${refId}::uuid AND user_id = ${LOCAL_USER_ID}::uuid`;
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

@@ -1,12 +1,12 @@
 import json
-import time
 import uuid
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 from pydantic import BaseModel
 
-from ..agents.planner import PlanRequest, plan_paper
+from ..agents.citation_verifier import CitationVerifyRequest, verify_citations
+from ..agents.planner import PlanRequest, _ensure_academic_sections, plan_paper
 from ..agents.reviewer import ReviewRequest, review_section
 from ..agents.typesetter import CompileRequest, compile_latex
 from ..agents.vlm_review import VlmReviewRequest, review_pdf
@@ -18,6 +18,7 @@ from ..orchestrator.graph_context import (
     extract_graph_context,
     latex_figures_and_tables,
 )
+from ..orchestrator.graph_contract import GraphContract
 from ..supermemory_client import context_for_work, search_work, store_memory
 
 EventCallback = Callable[[str, str, str, dict], Awaitable[None]]
@@ -62,13 +63,6 @@ def _min_section_words(target_words: int) -> int:
     return max(150, int(target_words * 0.85))
 
 
-def _bib_keys(discovered_refs: list[dict], graph: dict) -> list[str]:
-    keys = [f"discovered{i}" for i in range(min(len(discovered_refs), 12))]
-    ctx = extract_graph_context(graph)
-    keys.extend(f"lit{i}" for i in range(len(ctx.literature)))
-    return keys
-
-
 def _resolve_venue_style(style: str, target_venue: str) -> str:
     venue = (target_venue or "").lower()
     if "icml" in venue:
@@ -83,29 +77,45 @@ def _resolve_venue_style(style: str, target_venue: str) -> str:
 def _build_main_tex(title: str, venue_style: str, sections: list[str]) -> str:
     safe_title = title.replace("_", "\\_")
     if venue_style == "ieee":
-        docclass = "\\documentclass[conference]{article}"
-        author = "\\author{Holocron Generated}"
-        bib_style = "plain"
+        lines = [
+            "\\documentclass[conference]{IEEEtran}",
+            "\\usepackage{graphicx}",
+            "\\usepackage{amsmath}",
+            "\\usepackage{hyperref}",
+            f"\\title{{{safe_title}}}",
+            "\\author{\\IEEEauthorblockN{Holocron Generated}}",
+            "\\begin{document}",
+            "\\maketitle",
+        ]
+        bib_style = "IEEEtran"
     elif venue_style == "icml":
-        docclass = "\\documentclass{article}"
-        author = "\\author{Holocron Generated}"
+        lines = [
+            "\\documentclass{article}",
+            "\\usepackage{graphicx}",
+            "\\usepackage{amsmath}",
+            "\\usepackage{hyperref}",
+            "\\usepackage{booktabs}",
+            f"\\title{{{safe_title}}}",
+            "\\author{Holocron Generated}",
+            "\\begin{document}",
+            "\\maketitle",
+        ]
         bib_style = "plain"
     else:
-        docclass = "\\documentclass[twocolumn]{article}"
-        author = "\\author{Holocron Generated}"
-        bib_style = "plain"
+        lines = [
+            "\\documentclass[twocolumn]{article}",
+            "\\usepackage{graphicx}",
+            "\\usepackage{amsmath}",
+            "\\usepackage{hyperref}",
+            "\\usepackage{booktabs}",
+            "\\usepackage{natbib}",
+            f"\\title{{{safe_title}}}",
+            "\\author{Holocron Generated}",
+            "\\begin{document}",
+            "\\maketitle",
+        ]
+        bib_style = "naturemag"
 
-    lines = [
-        docclass,
-        "\\usepackage{graphicx}",
-        "\\usepackage{amsmath}",
-        "\\usepackage{hyperref}",
-        "\\usepackage{booktabs}",
-        f"\\title{{{safe_title}}}",
-        author,
-        "\\begin{document}",
-        "\\maketitle",
-    ]
     for section in sections:
         safe = section.replace(" ", "_")
         lines.append(f"\\input{{sections/{safe}.tex}}")
@@ -113,6 +123,49 @@ def _build_main_tex(title: str, venue_style: str, sections: list[str]) -> str:
     lines.append("\\bibliography{references}")
     lines.append("\\end{document}")
     return "\n".join(lines) + "\n"
+
+
+def _fallback_section_latex(
+    section_name: str,
+    graph_snippets: list[str],
+    bib_keys: list[str],
+    latex_blocks: str = "",
+) -> str:
+    lines = [f"\\section{{{section_name}}}"]
+    for snip in graph_snippets[:12]:
+        lines.append(snip.replace("bibtex:", "Reference:"))
+    if bib_keys:
+        cite_line = " ".join(f"\\cite{{{k}}}" for k in bib_keys[:8])
+        lines.append(f"Prior work establishes context for this study {cite_line}.")
+    if latex_blocks:
+        lines.append(latex_blocks)
+    return "\n\n".join(lines)
+
+
+async def _emit_memory(
+    on_event: EventCallback | None,
+    work_id: str,
+    action: str,
+    message: str,
+    *,
+    section: str = "",
+    query: str = "",
+    preview: str = "",
+):
+    await _emit(
+        on_event,
+        "Supermemory",
+        "memory",
+        message,
+        {
+            "action": action,
+            "section": section,
+            "containerTag": f"work_{work_id}",
+            "preview": preview[:500],
+            "query": query,
+            "phase": "planning" if action == "profile" else "body_sections",
+        },
+    )
 
 
 async def _write_section(
@@ -123,6 +176,7 @@ async def _write_section(
     on_event: EventCallback | None,
     graph_ctx,
     graph_ctx_dict: dict,
+    contract: GraphContract,
     plan: dict | None,
     paper_title: str,
     memory_ctx: str,
@@ -145,18 +199,30 @@ async def _write_section(
     if isinstance(outline, str):
         outline = [line.strip() for line in outline.split("\n") if line.strip()]
 
-    graph_snippets = graph_ctx.snippets_for_section(name)
+    node_ids = section.get("graph_node_ids") or contract.node_ids_for_section(name)
+    graph_snippets = graph_ctx.snippets_for_node_ids(node_ids) if node_ids else graph_ctx.snippets_for_section(name)
+    if not graph_snippets:
+        graph_snippets = graph_ctx.snippets_for_section(name)
+
+    section_flow = graph_ctx.section_flow(name, node_ids) or graph_ctx.flow_summary()
     section_figures = copied_figures if name.lower() in ("results", "discussion") else []
     section_latex = latex_blocks if name.lower() == "results" else ""
     min_words = _min_section_words(target_words)
+    bib_keys = contract.bib_keys_for_section(name) or contract.required_cite_keys()
 
     await _emit(
         on_event, "Writer", "writing", f"Drafting {name}",
-        {"phase": phase, "section": name, "workflow_stage": "writing"},
+        {"phase": phase, "section": name, "workflow_stage": "writing", "graph_node_ids": node_ids},
     )
 
     search_q = f"{name} {outline[0] if outline else paper_title}"
     section_memory = await search_work(req.work_id, search_q, limit=3)
+    if section_memory:
+        await _emit_memory(
+            on_event, req.work_id, "search",
+            f"Recalled memories for {name}",
+            section=name, query=search_q, preview=section_memory,
+        )
 
     draft = await draft_section(
         DraftRequest(
@@ -168,6 +234,7 @@ async def _write_section(
                 "memory": memory_ctx,
                 "section_memory": section_memory,
                 "discovered_refs": discovered_refs[:8],
+                "graph_node_ids": node_ids,
             },
             style_guide=style,
             target_words=target_words,
@@ -176,8 +243,8 @@ async def _write_section(
             graph_snippets=graph_snippets,
             figures=section_figures,
             latex_blocks=section_latex,
-            experiment_flow=graph_ctx.flow_summary(),
-            bib_keys=_bib_keys(discovered_refs, req.graph),
+            experiment_flow=section_flow,
+            bib_keys=bib_keys,
         )
     )
     content = draft.content
@@ -188,6 +255,11 @@ async def _write_section(
             req.work_id, f"review feedback {name} {paper_title}", limit=3
         )
         for i in range(max_reviews):
+            await _emit(
+                on_event, "Reviewer", "reviewing",
+                f"Reviewing {name} (round {i + 1})",
+                {"phase": "review", "section": name, "round": i + 1},
+            )
             review = await review_section(
                 ReviewRequest(
                     section_name=name,
@@ -200,26 +272,47 @@ async def _write_section(
                     },
                     min_words=min_words,
                     graph_snippets=graph_snippets,
+                    required_bib_keys=bib_keys,
+                    contract_node_count=len(node_ids),
                 )
             )
             if review.revised_content:
                 content = review.revised_content
                 word_count = len(content.split())
             if review.approved and word_count >= min_words:
+                await _emit(
+                    on_event, "Reviewer", "completed",
+                    f"Approved {name} ({word_count} words)",
+                    {"phase": "review", "section": name, "approved": True},
+                )
                 break
+            await _emit(
+                on_event, "Reviewer", "feedback",
+                review.feedback or f"{name} needs revision",
+                {"phase": "review", "section": name, "approved": False},
+            )
+
+    if word_count < min_words and graph_snippets:
+        content = _fallback_section_latex(name, graph_snippets, bib_keys, section_latex)
+        word_count = len(content.split())
 
     section_path = sections_dir / f"{safe_name}.tex"
-    if word_count < 10 and section_path.exists():
-        content = section_path.read_text(encoding="utf-8")
-        word_count = len(content.split())
-    else:
-        section_path.write_text(content, encoding="utf-8")
+    if word_count < 10:
+        raise ValueError(f"Section {name} failed — {word_count} words after fallback.")
+    section_path.write_text(content, encoding="utf-8")
+
+    contract.mark_satisfied(content, name)
 
     await store_memory(
         f"section: {name}\n{content}",
         req.work_id,
         custom_id=f"gen_{gen_id}_{safe_name}",
         metadata={"type": "writer", "generationId": gen_id, "workId": req.work_id, "section": name},
+    )
+    await _emit_memory(
+        on_event, req.work_id, "store",
+        f"Stored {name} draft in Supermemory",
+        section=name, preview=content[:500],
     )
     await _emit(
         on_event, "Writer", "completed", f"Generated {name} ({word_count} words)",
@@ -259,6 +352,7 @@ async def run_generation(
 
     total_words = 0
     discovered_refs: list[dict[str, Any]] = []
+    contract = GraphContract.from_graph(req.graph)
 
     await _emit(
         on_event, "Commander", "agent", "CommanderAgent: Starting paper generation pipeline",
@@ -266,9 +360,20 @@ async def run_generation(
     )
 
     memory_ctx = await context_for_work(req.work_id, query=paper_title)
+    if memory_ctx:
+        await _emit_memory(
+            on_event, req.work_id, "profile",
+            "Loaded work and user profile from Supermemory",
+            query=paper_title, preview=memory_ctx,
+        )
 
     plan = None
     if enable_planning:
+        await _emit(
+            on_event, "Planner", "searching",
+            f"Searching references for: {paper_title}",
+            {"phase": "reference_discovery", "search_query": paper_title},
+        )
         plan_result = await plan_paper(
             PlanRequest(
                 graph=req.graph,
@@ -279,8 +384,22 @@ async def run_generation(
         )
         plan = plan_result.model_dump()
         discovered_refs = plan_result.discovered_refs
+        contract = GraphContract.from_graph(req.graph, discovered_refs)
+
         if not plan_result.sections:
             raise ValueError("Planner returned zero sections — cannot continue.")
+
+        await _emit(
+            on_event, "Planner", "found",
+            f"Found {len(discovered_refs)} references via {plan_result.search_source}",
+            {
+                "phase": "reference_discovery",
+                "search_query": plan_result.search_query,
+                "source": plan_result.search_source,
+                "count": len(discovered_refs),
+                "discovered_refs": discovered_refs[:5],
+            },
+        )
         await _emit(
             on_event, "Planner", "completed",
             f"Plan created with {len(plan_result.sections)} sections",
@@ -292,6 +411,11 @@ async def run_generation(
             custom_id=f"gen_{gen_id}_plan",
             metadata={"type": "planner", "generationId": gen_id, "workId": req.work_id},
         )
+        await _emit_memory(
+            on_event, req.work_id, "store",
+            "Stored planner output in Supermemory",
+            preview=json.dumps(plan)[:500],
+        )
 
     sections = (plan or {}).get("sections") or [
         {"name": "Abstract", "paragraphs": 1, "target_words": 250},
@@ -301,6 +425,19 @@ async def run_generation(
         {"name": "Discussion", "paragraphs": 4, "target_words": 800},
         {"name": "Conclusion", "paragraphs": 2, "target_words": 300},
     ]
+    sections = _ensure_academic_sections(sections, graph_ctx_dict)
+
+    await store_memory(
+        contract.summary(),
+        req.work_id,
+        custom_id=f"gen_{gen_id}_contract",
+        metadata={"type": "graph", "generationId": gen_id, "workId": req.work_id},
+    )
+    await _emit_memory(
+        on_event, req.work_id, "store",
+        f"Stored GraphContract ({len(contract.obligations)} nodes)",
+        preview=contract.summary()[:500],
+    )
 
     section_word_counts: dict[str, int] = {}
     section_files: dict[str, str] = {}
@@ -311,6 +448,7 @@ async def run_generation(
         on_event=on_event,
         graph_ctx=graph_ctx,
         graph_ctx_dict=graph_ctx_dict,
+        contract=contract,
         plan=plan,
         paper_title=paper_title,
         memory_ctx=memory_ctx,
@@ -340,6 +478,65 @@ async def run_generation(
                 word_count=total_words,
             )
 
+    validation = contract.validate()
+    if not validation["passed"]:
+        await _emit(
+            on_event, "Commander", "agent",
+            f"Graph contract: {validation['satisfied']}/{validation['total']} nodes satisfied; re-drafting",
+            {"phase": "body_sections", "unsatisfied": validation["unsatisfied_nodes"][:5]},
+        )
+        for node_info in validation["unsatisfied_nodes"][:3]:
+            sec_name = node_info["section"]
+            sec = next((s for s in sections if s.get("name") == sec_name), None)
+            if not sec:
+                continue
+            boosted = dict(sec)
+            boosted["graph_node_ids"] = [node_info["id"]]
+            boosted["target_words"] = int(_section_budget(sec, len(sections), target_pages) * 1.2)
+            name, word_count = await _write_section(section=boosted, **write_kwargs)
+            old = section_word_counts.get(name, 0)
+            total_words += word_count - old
+            section_word_counts[name] = word_count
+            section_files[name] = (sections_dir / f"{name.replace(' ', '_')}.tex").read_text(encoding="utf-8")
+
+    bib_content = build_bibtex_entries(discovered_refs, req.graph)
+    if not bib_content.strip():
+        bib_content = "@article{placeholder2024, title={Placeholder Reference}, year={2024}}\n"
+    (output_dir / "references.bib").write_text(bib_content, encoding="utf-8")
+
+    cite_verify = await verify_citations(
+        CitationVerifyRequest(
+            section_contents=section_files,
+            bib_content=bib_content,
+            required_keys=contract.required_cite_keys(),
+            literature_keys=contract.literature_keys,
+        )
+    )
+    await _emit(
+        on_event, "CitationVerifier", "completed" if cite_verify.passed else "feedback",
+        cite_verify.report,
+        {
+            "phase": "review",
+            "uncovered_bib_keys": cite_verify.uncovered_bib_keys[:10],
+            "uncovered_literature": cite_verify.uncovered_literature,
+        },
+    )
+
+    if not cite_verify.passed and cite_verify.thinnest_section:
+        thinnest = cite_verify.thinnest_section
+        sec = next((s for s in sections if s.get("name") == thinnest), None)
+        if sec:
+            uncovered = cite_verify.uncovered_bib_keys + cite_verify.uncovered_literature
+            boosted = dict(sec)
+            boosted["outline"] = list(sec.get("outline") or []) + [
+                f"Cite these references: {', '.join(uncovered[:8])}"
+            ]
+            name, word_count = await _write_section(section=boosted, **write_kwargs)
+            old = section_word_counts.get(name, 0)
+            total_words += word_count - old
+            section_word_counts[name] = word_count
+            section_files[name] = (sections_dir / f"{name.replace(' ', '_')}.tex").read_text(encoding="utf-8")
+
     min_total = target_pages * 400
     expansion_passes = 0
     while total_words < min_total and section_word_counts and expansion_passes < 3:
@@ -366,25 +563,28 @@ async def run_generation(
         name = section.get("name", "Section")
         safe_name = name.replace(" ", "_")
         path = sections_dir / f"{safe_name}.tex"
-        if not path.exists():
-            raise ValueError(f"Missing section file: {safe_name}.tex — generation incomplete.")
+        if not path.exists() or path.stat().st_size < 20:
+            raise ValueError(f"Missing or empty section file: {safe_name}.tex")
 
     main_tex = _build_main_tex(paper_title, venue_style, list(section_files.keys()))
     (output_dir / "main.tex").write_text(main_tex, encoding="utf-8")
 
-    bib_content = build_bibtex_entries(discovered_refs, req.graph)
-    if not bib_content.strip():
-        bib_content = "@article{placeholder2024, title={Placeholder Reference}, year={2024}}\n"
-    (output_dir / "references.bib").write_text(bib_content, encoding="utf-8")
-
     pdf_path = None
     if compile_pdf:
+        await _emit(
+            on_event, "Typesetter", "typesetting", "Compiling LaTeX to PDF",
+            {"phase": "typesetting", "workflow_stage": "typesetting"},
+        )
         compile_result = await compile_latex(
             CompileRequest(project_dir=str(output_dir), main_file="main.tex")
         )
         pdf_path = compile_result.pdf_path
         if compile_result.success:
-            await _emit(on_event, "Typesetter", "completed", "PDF compiled successfully")
+            await _emit(on_event, "Typesetter", "completed", "PDF compiled successfully",
+                        {"phase": "typesetting"})
+        else:
+            await _emit(on_event, "Typesetter", "feedback", "PDF compilation had warnings",
+                        {"phase": "typesetting"})
         if pdf_path:
             vlm = await review_pdf(VlmReviewRequest(pdf_path=pdf_path, target_pages=target_pages))
             await store_memory(
@@ -393,11 +593,17 @@ async def run_generation(
                 custom_id=f"gen_{gen_id}_vlm",
                 metadata={"type": "vlm_review", "generationId": gen_id, "workId": req.work_id},
             )
+            await _emit(
+                on_event, "VLMReview", "completed" if vlm.passed else "feedback",
+                f"VLM review: {'passed' if vlm.passed else 'issues found'}",
+                {"phase": "review", "issues": vlm.issues[:3] if vlm.issues else []},
+            )
 
+    final_validation = contract.validate()
     await _emit(
         on_event, "Commander", "completed",
-        f"Paper generation complete ({total_words} words total)",
-        {"workflow_stage": "complete", "word_count": total_words},
+        f"Paper generation complete ({total_words} words, {final_validation['satisfied']}/{final_validation['total']} graph nodes)",
+        {"workflow_stage": "complete", "word_count": total_words, "graph_validation": final_validation},
     )
 
     status = "completed" if (pdf_path or not compile_pdf) else "completed_with_warnings"

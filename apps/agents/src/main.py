@@ -20,7 +20,9 @@ from .agents.typesetter import (
 )
 from .agents.metadata import MetadataRequest, generate_from_metadata
 from .agents.vlm_review import VlmPageRequest, VlmReviewRequest, VlmFixRequest, analyze_page, review_pdf, suggest_fixes
+from .agents.citation_verifier import CitationVerifyRequest, verify_citations
 from .orchestrator.commander import GenerateRequest, run_generation
+from .event_store import persist_generation_event
 from .supermemory_client import configure_settings_once, health_status
 from .search.google_scholar import search_google_scholar
 
@@ -134,6 +136,11 @@ async def vlm_suggest_fixes(req: VlmFixRequest):
     return await suggest_fixes(req)
 
 
+@app.post("/agents/citation-verifier/verify")
+async def citation_verifier_verify(req: CitationVerifyRequest):
+    return await verify_citations(req)
+
+
 @app.post("/agents/commander/generate")
 async def commander_generate(req: GenerateRequest, background_tasks: BackgroundTasks):
     gen_id = req.generation_id or str(uuid.uuid4())
@@ -141,9 +148,14 @@ async def commander_generate(req: GenerateRequest, background_tasks: BackgroundT
     _generation_jobs[gen_id] = {"status": "running", "events": []}
 
     async def on_event(agent, event_type, message, metadata):
-        _generation_jobs[gen_id]["events"].append(
-            {"agent": agent, "event_type": event_type, "message": message, "metadata": metadata}
-        )
+        event = {
+            "agent": agent,
+            "event_type": event_type,
+            "message": message,
+            "metadata": metadata,
+        }
+        _generation_jobs[gen_id]["events"].append(event)
+        persist_generation_event(gen_id, agent, event_type, message, metadata)
 
     async def run():
         try:
@@ -153,6 +165,9 @@ async def commander_generate(req: GenerateRequest, background_tasks: BackgroundT
         except Exception as e:
             _generation_jobs[gen_id]["status"] = "failed"
             _generation_jobs[gen_id]["error"] = str(e)
+            persist_generation_event(
+                gen_id, "Commander", "failed", str(e), {"workflow_stage": "error"}
+            )
 
     background_tasks.add_task(run)
     return {"generation_id": gen_id, "status": "running"}

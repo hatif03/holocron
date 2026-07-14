@@ -38,12 +38,30 @@ async def draft_section(req: DraftRequest) -> DraftResponse:
 async def _generate_draft(
     req: DraftRequest, expand: bool = False, prior: str = ""
 ) -> str:
+    section_lower = req.section_name.lower()
     cite_hint = ""
     if req.bib_keys:
-        cite_hint = (
-            f" Cite using these BibTeX keys: {', '.join(req.bib_keys[:12])}. "
-            "Include at least 2 \\cite{} references where appropriate."
-        )
+        if section_lower in ("related work", "related_work"):
+            lit_keys = [k for k in req.bib_keys if k.startswith("lit")]
+            cite_hint = (
+                f" You MUST cite every literature node: {', '.join(lit_keys)}. "
+                f"Use \\cite{{{', '.join(lit_keys)}}} throughout."
+            )
+        elif section_lower == "introduction":
+            cite_hint = (
+                f" Cite at least 3 references using keys: {', '.join(req.bib_keys[:8])}. "
+                "Include \\cite{} for discovered and literature sources."
+            )
+        elif section_lower == "results":
+            cite_hint = (
+                f" Include all figure/table LaTeX blocks provided. "
+                f"Cite supporting refs: {', '.join(req.bib_keys[:6])}."
+            )
+        else:
+            cite_hint = (
+                f" Cite using these BibTeX keys: {', '.join(req.bib_keys[:12])}. "
+                "Include at least 2 \\cite{} references where appropriate."
+            )
     system = (
         f"You are the Writer agent. Generate LaTeX for the {req.section_name} section "
         f"of a {req.style_guide} academic paper following IMRaD conventions. "
@@ -80,9 +98,11 @@ async def _generate_draft(
     content = await llm.complete(system, user, max_tokens=8192)
     word_count = len(content.split())
     if word_count < 50 and req.graph_snippets:
+        bib_cites = " ".join(f"\\cite{{{k}}}" for k in req.bib_keys[:8])
         fallback = (
             f"\\section{{{req.section_name}}}\n"
             + "\n\n".join(req.graph_snippets[:8])
+            + (f"\n\nPrior work: {bib_cites}" if bib_cites else "")
             + (f"\n\n{req.latex_blocks}" if req.latex_blocks else "")
         )
         return fallback

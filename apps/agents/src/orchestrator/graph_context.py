@@ -44,6 +44,59 @@ class GraphContext:
             "ordered_node_ids": self.ordered_node_ids,
         }
 
+    def _all_items(self) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        for group in (
+            self.ideation, self.literature, self.concepts, self.methods,
+            self.experiments, self.data_sources, self.metrics, self.results,
+            self.findings, self.figures, self.tables, self.paper_sections,
+        ):
+            items.extend(group)
+        return items
+
+    def item_by_id(self, node_id: str) -> dict[str, Any] | None:
+        for item in self._all_items():
+            if str(item.get("id", "")) == str(node_id):
+                return item
+        return None
+
+    def snippets_for_node_ids(self, node_ids: list[str], ordered: bool = True) -> list[str]:
+        """Targeted snippets for explicit graph_node_ids from planner."""
+        if not node_ids:
+            return []
+        id_set = {str(i) for i in node_ids}
+        order = self.ordered_node_ids if ordered else list(id_set)
+        snippets: list[str] = []
+        for nid in order:
+            if nid not in id_set:
+                continue
+            item = self.item_by_id(nid)
+            if item:
+                snippets.extend(_text_fields(item))
+        for nid in id_set:
+            if nid in order:
+                continue
+            item = self.item_by_id(nid)
+            if item:
+                snippets.extend(_text_fields(item))
+        return [s for s in snippets if s.strip()]
+
+    def section_flow(self, section_name: str, node_ids: list[str] | None = None) -> str:
+        """Topological sub-path for a section's graph nodes."""
+        ids = node_ids or []
+        if not ids:
+            return ""
+        id_set = set(str(i) for i in ids)
+        id_to_label: dict[str, str] = {}
+        for item in self._all_items():
+            nid = str(item.get("id", ""))
+            if nid:
+                id_to_label[nid] = str(item.get("label") or item.get("name") or nid)
+        labels = [id_to_label.get(nid, nid) for nid in self.ordered_node_ids if nid in id_set]
+        if not labels:
+            labels = [id_to_label.get(nid, nid) for nid in ids]
+        return " → ".join(labels[:15])
+
     def snippets_for_section(self, section_name: str) -> list[str]:
         name = section_name.lower()
         snippets: list[str] = []
@@ -120,6 +173,8 @@ def _text_fields(data: dict[str, Any]) -> list[str]:
         "label", "body", "rationale", "context", "description", "definition",
         "user_notes", "pseudo_code", "environment", "value", "significance",
         "caption", "outline", "draft_notes", "name", "formula", "columns", "rows",
+        "bibtex", "source_note", "related_terms", "unit", "target_value",
+        "script_source", "notes",
     ):
         val = data.get(key)
         if val and isinstance(val, str):
@@ -198,6 +253,10 @@ def extract_graph_context(graph: dict[str, Any]) -> GraphContext:
             ctx.tables.append(entry)
         elif ntype == "paper_section":
             ctx.paper_sections.append(entry)
+        elif ntype == "end":
+            notes = data.get("notes") or data.get("body") or ""
+            if notes:
+                ctx.findings.append({**entry, "label": "end_notes", "body": str(notes)})
 
     return ctx
 

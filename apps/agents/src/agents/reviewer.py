@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -13,6 +14,8 @@ class ReviewRequest(BaseModel):
     context: dict[str, Any] | None = None
     min_words: int = 200
     graph_snippets: list[str] = Field(default_factory=list)
+    required_bib_keys: list[str] = Field(default_factory=list)
+    contract_node_count: int = 0
 
 
 class ReviewResponse(BaseModel):
@@ -24,7 +27,7 @@ class ReviewResponse(BaseModel):
 def _uses_graph_content(content: str, snippets: list[str]) -> bool:
     """Check if section references graph-derived terms."""
     if not snippets:
-        return True
+        return False
     content_lower = content.lower()
     for snip in snippets[:8]:
         for part in snip.split(":")[1:] if ":" in snip else [snip]:
@@ -32,6 +35,19 @@ def _uses_graph_content(content: str, snippets: list[str]) -> bool:
             if words and any(w.lower() in content_lower for w in words if len(w) > 4):
                 return True
     return "graph" in content_lower or "experiment" in content_lower
+
+
+def _citation_coverage(content: str, required_keys: list[str]) -> float:
+    if not required_keys:
+        return 1.0
+    cited: set[str] = set()
+    for match in re.findall(r"\\cite\{([^}]+)\}", content):
+        for k in match.split(","):
+            cited.add(k.strip())
+    if not cited:
+        return 0.0
+    covered = sum(1 for k in required_keys if k in cited)
+    return covered / len(required_keys)
 
 
 async def review_section(req: ReviewRequest) -> ReviewResponse:
@@ -64,11 +80,20 @@ async def review_section(req: ReviewRequest) -> ReviewResponse:
         except json.JSONDecodeError:
             pass
 
-    needs_graph = section_lower in ("methods", "results")
-    if needs_graph and req.graph_snippets and not _uses_graph_content(req.content, req.graph_snippets):
+    needs_graph = section_lower in ("methods", "results", "related work")
+    has_contract_nodes = req.contract_node_count > 0 or bool(req.graph_snippets)
+    if needs_graph and has_contract_nodes and not _uses_graph_content(req.content, req.graph_snippets):
         return ReviewResponse(
             approved=False,
             feedback="Section lacks graph-derived content. Reference methods, experiments, metrics, or findings from the research graph.",
+            revised_content=None,
+        )
+
+    if req.required_bib_keys and _citation_coverage(req.content, req.required_bib_keys) < 0.5:
+        missing = [k for k in req.required_bib_keys if k not in req.content]
+        return ReviewResponse(
+            approved=False,
+            feedback=f"Insufficient citations. Include \\cite{{{', '.join(missing[:6])}}} from the graph literature.",
             revised_content=None,
         )
 
@@ -84,6 +109,8 @@ async def review_section(req: ReviewRequest) -> ReviewResponse:
         f"Words: {word_count}",
         f"Minimum words: {req.min_words}",
     ]
+    if req.required_bib_keys:
+        user_parts.append(f"Required citations: {', '.join(req.required_bib_keys[:12])}")
     if req.context:
         user_parts.append(f"Context:\n{json.dumps(req.context)}")
     user_parts.append(req.content)
@@ -95,6 +122,8 @@ async def review_section(req: ReviewRequest) -> ReviewResponse:
         revised = data.get("revised_content")
         final_words = len(revised.split()) if revised else word_count
         approved = bool(data.get("approved")) and final_words >= req.min_words
+        if req.required_bib_keys and _citation_coverage(revised or req.content, req.required_bib_keys) < 0.3:
+            approved = False
         return ReviewResponse(
             approved=approved,
             feedback=data.get("feedback", ""),

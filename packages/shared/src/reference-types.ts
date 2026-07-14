@@ -3,6 +3,7 @@ import { z } from "zod";
 export const paperSearchSourceSchema = z.enum([
   "semantic_scholar",
   "arxiv",
+  "google_scholar",
   "manual",
 ]);
 export type PaperSearchSource = z.infer<typeof paperSearchSourceSchema>;
@@ -49,6 +50,7 @@ export type PaperSearchResult = z.infer<typeof paperSearchResultSchema>;
 export const EVENT_TYPE_COLORS: Record<string, string> = {
   llm: "bg-indigo-100 text-indigo-700",
   search: "bg-orange-100 text-orange-700",
+  memory: "bg-violet-100 text-violet-700",
   found: "bg-amber-100 text-amber-800",
   writing: "bg-blue-100 text-blue-700",
   agent: "bg-purple-100 text-purple-700",

@@ -163,6 +163,12 @@ export const NODE_FIELD_SCHEMAS: Record<NodeType, NodeTypeMeta> = {
         type: "textarea",
         aiAssist: true,
       },
+      {
+        key: "related_terms",
+        label: "Related terms",
+        type: "text",
+        aiAssist: true,
+      },
     ],
   },
   method: {
@@ -229,6 +235,7 @@ export const NODE_FIELD_SCHEMAS: Record<NodeType, NodeTypeMeta> = {
       { key: "name", label: "name", type: "text", aiAssist: true },
       { key: "formula", label: "formula", type: "text", aiAssist: true },
       { key: "unit", label: "unit", type: "text", aiAssist: true },
+      { key: "target_value", label: "Target value", type: "text", aiAssist: true },
     ],
   },
   result: {
@@ -312,6 +319,8 @@ export const NODE_FIELD_SCHEMAS: Record<NodeType, NodeTypeMeta> = {
         type: "textarea",
         aiAssist: true,
       },
+      { key: "columns", label: "Columns", type: "text", aiAssist: true },
+      { key: "rows", label: "Rows", type: "textarea", aiAssist: true },
     ],
   },
   paper_section: {
@@ -327,6 +336,12 @@ export const NODE_FIELD_SCHEMAS: Record<NodeType, NodeTypeMeta> = {
       {
         key: "outline",
         label: "outline",
+        type: "textarea",
+        aiAssist: true,
+      },
+      {
+        key: "draft_notes",
+        label: "Draft notes",
         type: "textarea",
         aiAssist: true,
       },

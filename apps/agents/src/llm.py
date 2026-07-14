@@ -103,29 +103,35 @@ class LLMClient:
 
     def _mock_response(self, system: str, user: str) -> str:
         if "outline" in user.lower() or "plan" in system.lower():
+            sections = [
+                {"name": "Abstract", "paragraphs": 1, "target_words": 250, "outline": ["Summary", "Key findings"]},
+                {"name": "Introduction", "paragraphs": 4, "target_words": 800, "outline": ["Background", "Gap", "Contributions"]},
+                {"name": "Related Work", "paragraphs": 3, "target_words": 600, "outline": ["Prior art", "Comparison"]},
+                {"name": "Methods", "paragraphs": 5, "target_words": 900, "outline": ["Design", "Data", "Metrics", "Analysis"]},
+                {"name": "Results", "paragraphs": 4, "target_words": 900, "outline": ["Primary outcomes", "Ablations", "Figures"]},
+                {"name": "Discussion", "paragraphs": 4, "target_words": 800, "outline": ["Interpretation", "Limitations", "Future work"]},
+                {"name": "Conclusion", "paragraphs": 2, "target_words": 300, "outline": ["Summary", "Impact"]},
+            ]
+            if "paper_section" in user or "Structured graph context" in user:
+                pass  # Related Work already included
+            return json.dumps({"sections": sections, "discovered_refs": []})
+        if "review" in system.lower():
+            word_hint = user.split("Words:")[-1].strip() if "Words:" in user else ""
+            approved = "below" not in user.lower() and "expand" not in user.lower()
             return json.dumps(
                 {
-                    "sections": [
-                        {"name": "Abstract", "paragraphs": 1},
-                        {"name": "Introduction", "paragraphs": 3},
-                        {"name": "Methods", "paragraphs": 4},
-                        {"name": "Results", "paragraphs": 3},
-                        {"name": "Discussion", "paragraphs": 3},
-                    ],
-                    "discovered_refs": [],
+                    "approved": approved,
+                    "feedback": "Section meets length and style requirements." if approved else "Expand with more graph-derived detail.",
+                    "revised_content": None if approved else self._mock_section_latex("Section", user),
                 }
             )
-        if "review" in system.lower():
-            return json.dumps(
-                {"approved": True, "feedback": "Section looks good.", "revised_content": None}
-            )
-        if "latex" in user.lower() or "section" in system.lower():
-            return (
-                "\\section{Introduction}\n"
-                "This paper presents a comprehensive analysis of the research topic. "
-                "Our approach combines rigorous methodology with novel insights derived "
-                "from the research graph structure.\n"
-            )
+        if "latex" in user.lower() or "section" in system.lower() or "Writer agent" in system:
+            section = "Introduction"
+            for candidate in ("Abstract", "Introduction", "Related Work", "Methods", "Results", "Discussion", "Conclusion"):
+                if candidate.lower() in user.lower():
+                    section = candidate
+                    break
+            return self._mock_section_latex(section, user)
         if "layout" in system.lower() or "vlm" in system.lower():
             return json.dumps({"passed": True, "issues": []})
         if "parse" in system.lower() or "pdf" in user.lower()[:100]:
@@ -141,6 +147,40 @@ class LLMClient:
                 }
             )
         return "Generated content for development mode."
+
+    def _mock_section_latex(self, section_name: str, user: str) -> str:
+        """~400-word mock LaTeX section for dev/CI without API key."""
+        base = (
+            f"\\section{{{section_name}}}\n"
+            "This section synthesizes evidence from the research graph and cited literature. "
+            "Our methodology follows established practices in the field while incorporating "
+            "novel elements derived from the structured research workflow. "
+        )
+        paragraph = (
+            "Prior work demonstrates that retrieval-augmented generation improves factual grounding "
+            "in scientific writing \\cite{discovered0}. We extend these findings by scoping memory "
+            "to individual research works, enabling persistent context across drafting iterations. "
+            "Experimental nodes in the graph specify environments, metrics, and expected outcomes; "
+            "we align generated prose with those constraints rather than inventing unsupported claims. "
+            "Figure nodes supply captions and asset paths that map directly to \\includegraphics "
+            "directives in the compiled manuscript. Literature nodes contribute BibTeX entries "
+            "merged into references.bib alongside papers discovered during planning. "
+        )
+        chunks = [base]
+        for i in range(12):
+            chunks.append(paragraph.replace("discovered0", f"discovered{i % 3}"))
+        if "graph context" in user.lower() or "Graph context" in user:
+            chunks.append(
+                "Graph-derived snippets informed the narrative structure: hypothesis statements "
+                "anchor the introduction, method descriptions constrain procedural claims, and "
+                "finding nodes supply quantitative summaries referenced in results. "
+            )
+        if section_name.lower() == "results" and "figures/" in user.lower():
+            chunks.append(
+                "\\begin{figure}[h]\n\\centering\n\\includegraphics[width=\\linewidth]{figures/tpl_fig1.svg}\n"
+                "\\caption{Representative result from seeded graph assets.}\n\\end{figure}\n"
+            )
+        return "".join(chunks)
 
 
 # Back-compat alias

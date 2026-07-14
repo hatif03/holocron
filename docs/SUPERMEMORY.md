@@ -45,6 +45,8 @@ Implementation:
 | After planning | `commander.py` | **Add documents** (`add` + `customId`) | Persist plan and discovered literature for future runs | Plan JSON in events is not semantically searchable |
 | Before each section | `commander.py` | **Hybrid search** (`searchMode: hybrid`) | Retrieve section-relevant prior drafts and reference chunks | No vector search; graph nodes miss paraphrased context |
 | After writer/reviewer | `commander.py` | **Add documents** | Capture draft and review loop outcomes | Review feedback in events is not injected into future prompts |
+| Memory UI events | `commander.py` → `_emit` | **Add + search** | Process log shows profile/search/store with preview | Plain text wall in UI was search-only |
+| Graph contract | `commander.py` | **Add documents** | Store `GraphContract` summary at generation start | Node obligations not searchable across sections |
 | Pipeline complete | `commander.py` | **Add documents** | Store generation milestone summary | Status field alone does not convey what was learned |
 | Planner local recall | `planner.py` | **Hybrid search** | Complement Semantic Scholar with user's ingested library | S2 only knows public literature |
 | Reference analyze | `POST /api/references/analyze` | **Add documents** | Make analysis semantically retrievable during writing | `references_lib.analysis` requires exact ID fetch |
@@ -67,11 +69,24 @@ Metadata on writes: `{ type, generationId, workId, section?, referenceId? }`.
 
 ### Paper generation pipeline
 
-1. **Start** — `context_for_work(work_id, title)` calls `profile` for user + work ([quickstart](https://supermemory.ai/docs/quickstart))
-2. **Planner** — hybrid search for local refs; after plan, `add` with `customId: gen_{id}_plan`
-3. **Writer** — hybrid search per section; inject into `DraftRequest.context.memory`
-4. **Reviewer** — store feedback via `add` when content is revised
-5. **Complete** — `add` generation summary with `type: generation_complete`
+1. **Start** — `context_for_work(work_id, title)` calls `profile` for user + work; emits Supermemory memory event to process log
+2. **GraphContract** — contract summary `add`ed with `customId: gen_{id}_contract`
+3. **Planner** — hybrid search for local refs; after plan, `add` with `customId: gen_{id}_plan`
+4. **Writer** — hybrid search per section; inject into `DraftRequest.context.memory`; `add` each section draft
+5. **Reviewer** — search prior review feedback; citation coverage gate before approval
+6. **Complete** — `add` generation summary with `type: generation_complete`
+
+### Web UI (MemoryView)
+
+Shared component: `apps/web/src/components/memory/MemoryView.tsx`
+
+| Surface | API | Features |
+|---------|-----|----------|
+| Generation detail | `GET /api/generations/[genId]/memory` | Rich search hits during run |
+| Research graph sidebar | `GET /api/works/[workId]/memory/search` | Hybrid search |
+| Profile block | `GET /api/works/[workId]/memory/profile` | Static + dynamic profile + hits |
+
+`searchMemoriesRich` returns `{ text, score, customId, metadata, type }` for expandable cards with type badges (`planner`, `writer`, `graph`, `reference`).
 
 ### Reference library
 
@@ -167,6 +182,10 @@ Holocron originally used **Postgres + file storage only**. The Supermemory integ
 | v2 | Reference summary | `POST /api/references/analyze` | add (compact summary) | Searchable analysis without embedding noise | Full JSON in PG requires exact ID fetch |
 | v2 | Graph snapshot | `PUT /api/works/[workId]` | add | Hypothesis structure recall | Graph JSON in PG isn't injected into prompts |
 | v2 | Memory search API | `GET /api/works/[workId]/memory/search` | hybrid search | UI/API library search | No web-side search before |
+| v3 | Profile API | `GET /api/works/[workId]/memory/profile` | `POST /v4/profile` | Static + dynamic profile in UI | Search-only UI showed raw text |
+| v3 | Memory events | `commander.py` `_emit` | profile/search/store previews | Process log drill-down | Events lacked memory metadata |
+| v3 | GraphContract store | `commander.py` | add → `work_{id}` | Cross-section node obligations recall | Coarse bucket mapping only |
+| v3 | Rich search hits | `supermemory-client.ts` | `searchMemoriesRich` | Score, type badge, customId in cards | Plain `string[]` only |
 | v1 | PDF ingest | upload routes | `POST /v3/documents/file` | OCR/chunk PDFs | Disk blobs opaque to agents |
 | v1 | User prefs | `POST /api/settings/llm` | add → `user_{id}` | Cross-work style recall | `llm_config.json` is operational, not semantic |
 | v1 | Settings bootstrap | `main.py`, web client | `PATCH /v3/settings` | Holocron-specific extraction filter | No PG equivalent |

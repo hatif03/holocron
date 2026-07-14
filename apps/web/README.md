@@ -42,9 +42,10 @@ src/
 ├── components/
 │   ├── ui/                 shadcn components (button, card, dialog, sidebar, …)
 │   ├── layout/             AppShell, PageHeader, marketing header
-│   ├── research-graph/     Canvas, nodes, sidebar, fields
-│   └── paper-generation/   Wizard, detail panels
-└── lib/                    db, agents-client, utils, canvas-store
+│   ├── research-graph/     Canvas, nodes, sidebar, MemoryPanel
+│   ├── paper-generation/   Wizard, detail panels, ProcessLogPanel
+│   └── memory/             MemoryView (profile + rich cards)
+└── lib/                    db, agents-client, supermemory-client, memory-types
 ```
 
 ## API routes
@@ -53,7 +54,10 @@ src/
 |-------|---------|
 | `/api/works` | CRUD research works + graph JSON |
 | `/api/references` | Reference library CRUD, search, upload, analyze |
-| `/api/generations` | Paper generation lifecycle |
+| `/api/generations` | Paper generation lifecycle + process log sync |
+| `/api/generations/[genId]/memory` | Supermemory search hits for generation detail |
+| `/api/works/[workId]/memory/search` | Hybrid memory search |
+| `/api/works/[workId]/memory/profile` | Profile + search hits for MemoryView |
 | `/api/settings/llm` | Proxy to agents LLM config |
 
 ## Theming

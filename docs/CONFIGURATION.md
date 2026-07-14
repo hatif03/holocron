@@ -17,7 +17,7 @@ On Windows, `~/.holocron` resolves to `C:\Users\<you>\.holocron`.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `LLM_PROVIDER` | `k2think`, `openai`, `anthropic`, `google`, `openrouter`, `custom` | `k2think` |
+| `LLM_PROVIDER` | `k2think`, `groq`, `openai`, `anthropic`, `google`, `openrouter`, `custom` | `k2think` |
 | `LLM_API_KEY` | Active provider API key | — |
 | `LLM_BASE_URL` | Override base URL | Provider default |
 | `LLM_MODEL` | Model identifier | Provider default |
@@ -27,6 +27,7 @@ On Windows, `~/.holocron` resolves to `C:\Users\<you>\.holocron`.
 | Provider | Env key |
 |----------|---------|
 | K2 Think | `K2THINK_API_KEY`, `K2THINK_BASE_URL`, `K2THINK_MODEL` |
+| Groq | `GROQ_API_KEY` |
 | OpenAI | `OPENAI_API_KEY` |
 | Anthropic | `ANTHROPIC_API_KEY` |
 | Google | `GOOGLE_API_KEY` |
@@ -36,7 +37,8 @@ On Windows, `~/.holocron` resolves to `C:\Users\<you>\.holocron`.
 
 | Provider | Base URL | Default model |
 |----------|----------|---------------|
-| K2 Think | `https://www.k2think.ai/api` | `MBZUAI-IFM/K2-Think-v2` |
+| K2 Think | `https://api.k2think.ai/v1` | `MBZUAI-IFM/K2-Think-v2` |
+| Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
 | OpenAI | `https://api.openai.com/v1` | `gpt-4o` |
 | Anthropic | `https://api.anthropic.com` | `claude-sonnet-4-20250514` |
 | Google | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.0-flash` |
@@ -57,7 +59,6 @@ If the resolved API key is empty or `mock-key-for-dev`, agents return placeholde
 | `AGENTS_SERVICE_URL` | Web → agents (server-side) | `http://localhost:8000` |
 | `NEXT_PUBLIC_AGENTS_URL` | Browser → agents (if needed) | `http://localhost:8000` |
 | `LATEX_SERVICE_URL` | Agents → LaTeX compiler | `http://localhost:8081` |
-| `LATEX_SERVICE_URL` | Agents → LaTeX compiler | `http://localhost:8081` |
 | `AUTH_MODE` | `local` (only mode implemented) | `local` |
 
 ## Supermemory Local
@@ -76,7 +77,18 @@ See [SUPERMEMORY.md](SUPERMEMORY.md) for integration rationale and setup.
 1. Open **Settings** at `/settings`, pick provider, enter key/model, save
 2. Or run `holocron setup` and restart the stack
 
-Settings POST to agents `/config/llm`, which updates in-memory config and writes `llm_config.json`. No container restart required for LLM changes.
+Settings POST to agents `/config/llm`, which updates in-memory config and writes `llm_config.json`. The store format supports multiple provider keys:
+
+```json
+{
+  "active_provider": "k2think",
+  "keys": { "k2think": "...", "groq": "..." },
+  "models": { "k2think": "MBZUAI-IFM/K2-Think-v2" },
+  "base_urls": { "k2think": "https://api.k2think.ai/v1" }
+}
+```
+
+No container restart required for LLM changes.
 
 ## Docker Compose
 

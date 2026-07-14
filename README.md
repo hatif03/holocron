@@ -55,11 +55,15 @@ holocron start
 ### Paper generation pipeline
 
 ```
-Planner → Writer ⇄ Reviewer → Typesetter → VLM Review
+Planner → Writer ⇄ Reviewer → Citation Verifier → Typesetter → VLM Review
+         ↑ GraphContract (per-node obligations) ↑
+         Supermemory profile / search / store at each phase
 ```
 
 - **Graph mode** — build a research graph, then generate from the `end` node
 - **Metadata mode** — four-step wizard: fields → BibTeX → options → confirm
+- **Process log** — events persist to Postgres (`generation_events`); backfill from disk with `npm run gen:backfill-events`
+- **Graph-faithful** — `GraphContract` tracks which nodes must appear in which sections; targeted re-draft on unsatisfied nodes
 
 Venue templates: Nature, IEEE, ICML.
 
@@ -72,6 +76,7 @@ Configure via **Settings** in the UI or `holocron setup`. Keys stay local — Ho
 | Provider | Default model | Notes |
 |----------|---------------|-------|
 | **K2 Think** | `MBZUAI-IFM/K2-Think-v2` | Recommended for demos — [build.k2think.ai](https://build.k2think.ai/) |
+| Groq | `llama-3.3-70b-versatile` | Fast OpenAI-compatible inference |
 | OpenAI | `gpt-4o` | Official API |
 | Anthropic | `claude-sonnet-4-20250514` | Messages API |
 | Google | `gemini-2.0-flash` | OpenAI-compatible endpoint |
@@ -152,10 +157,16 @@ holocron/
 ### Scripts
 
 ```bash
-npm run dev      # Turbo dev (all workspaces)
-npm run build    # Build all packages
-npm run lint     # Lint
-npm run seed     # Seed demo template graph
+npm run dev          # Turbo dev (all workspaces)
+npm run build        # Build all packages
+npm run lint         # Lint
+npm run seed         # Seed demo template graph
+npm run seed:all     # Full demo pipeline (refs + works + template)
+npm run graph:respread   # Re-space graph node layout
+npm run gen:live     # Live paper generation via agents API
+npm run gen:verify   # Verify latest generation artifacts
+npm run gen:cleanup  # Remove failed/stub generations
+npm run gen:backfill-events  # Reconstruct process log from disk
 ```
 
 App-specific guides: [apps/web/README.md](apps/web/README.md), [packages/cli/README.md](packages/cli/README.md).
@@ -169,9 +180,10 @@ App-specific guides: [apps/web/README.md](apps/web/README.md), [packages/cli/REA
 | **Paper Parser** | PDF understanding and structured extraction |
 | **Template Parser** | LaTeX venue template rules |
 | **Commander** | Pipeline orchestrator |
-| **Planner** | Outline + Semantic Scholar discovery |
-| **Writer** | LaTeX section generation |
-| **Reviewer** | Logic and style review loop |
+| **Planner** | Outline + Semantic Scholar / arXiv discovery |
+| **Writer** | IMRaD LaTeX section generation (graph-grounded) |
+| **Reviewer** | Logic, style, length, citation coverage review loop |
+| **Citation Verifier** | Ensures all bib keys and literature nodes are cited |
 | **Typesetter** | Self-healing LaTeX compilation |
 | **Metadata** | Simple-mode paper from metadata fields |
 | **VLM Review** | Visual PDF layout detection |
@@ -186,6 +198,8 @@ App-specific guides: [apps/web/README.md](apps/web/README.md), [packages/cli/REA
 | Port in use | Stop conflicting services on 3000, 8000, or 5432 |
 | Agents offline in Settings | Ensure stack is up: `holocron start` |
 | Mock content only | Add a real API key in Settings or `holocron setup` |
+| Process log empty on old runs | `npm run gen:backfill-events -- <genId>` |
+| Agents offline during generation | Check `/agents` health; ensure Docker agents on `:8000` |
 
 ---
 

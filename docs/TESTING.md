@@ -57,6 +57,21 @@ After a Supermemory-enabled generation on the same work:
 1. Second generation should show planner/writer context influenced by prior plan (check agent logs or `GET /api/works/{workId}/memory/search?q=plan`).
 2. Reference analyze with `work_id` stores compact summary retrievable via search.
 3. `GET /health` on agents reports `"supermemory":"ok"` when key is configured.
+4. Process log shows 30+ events including Supermemory, Planner, Writer, Reviewer entries.
+5. `GET /api/works/{workId}/memory/profile` returns static/dynamic profile blocks.
+
+### Live generation scripts
+
+```bash
+npm run seed:all -- --force    # Reseed demo works
+npm run graph:respread         # Re-space graph nodes
+npm run gen:cleanup            # Remove failed generations
+npm run gen:live               # Full pipeline via agents API
+npm run gen:verify             # Check PDF, word count, bib
+npm run gen:backfill-events -- <genId>  # Reconstruct empty process logs
+```
+
+Success criteria for `gen:live`: ≥15 events, ≥2500 words, PDF > 50 KB, no placeholder bib.
 
 ## Playwright report
 

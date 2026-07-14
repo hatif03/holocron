@@ -62,10 +62,13 @@ Auth is local-only: a seeded `LOCAL_USER` UUID; no login UI.
 **Key modules:**
 
 - `src/llm.py` — multi-provider LLM client with mock fallback
-- `src/config.py` — settings, provider defaults, runtime `llm_config.json` override
-- `src/orchestrator/commander.py` — full paper generation pipeline
+- `src/config.py` — settings, multi-key provider store, runtime `llm_config.json` override
+- `src/event_store.py` — durable `generation_events` writes to Postgres
+- `src/orchestrator/commander.py` — full paper generation pipeline (IMRaD, expansion, citations)
+- `src/orchestrator/graph_context.py` — graph → typed buckets, snippets, topological flow
+- `src/orchestrator/graph_contract.py` — per-node section obligations and validation
 - `src/supermemory_client.py` — Supermemory Local wrapper (profiles, search, add)
-- `src/agents/*` — planner, writer, reviewer, typesetter, metadata, VLM review, parsers
+- `src/agents/*` — planner, writer, reviewer, citation_verifier, typesetter, metadata, VLM review, parsers
 
 **Config endpoints:**
 
@@ -90,7 +93,8 @@ Postgres schema (`db/migrations/`):
 - **users** — stub for future auth; one local user seeded
 - **research_works** — title, description, graph JSON (nodes + edges)
 - **references** — bibliography entries with BibTeX and metadata
-- **paper_generations** — generation jobs, status, output paths, event log
+- **paper_generations** — generation jobs, status, output paths
+- **generation_events** — durable process log (agent, event_type, message, metadata)
 
 Files (PDFs, LaTeX, compiled output) live under `STORAGE_PATH`.
 
@@ -107,10 +111,14 @@ Holocron uses [Supermemory Local](https://supermemory.ai/docs/self-hosting/overv
 
 **Flow during generation:**
 
-1. Commander calls `profile` + `search` before planning/writing
-2. Planner/writer outputs are `add`ed to `work_{workId}` after each phase
-3. Reference PDFs are ingested via web API routes
-4. User preferences land in `user_{userId}` on settings save
+1. Commander calls `profile` + `search` before planning/writing; emits Supermemory events to process log
+2. `GraphContract` built from graph + discovered refs; summary stored in Supermemory
+3. Planner/writer outputs are `add`ed to `work_{workId}` after each phase
+4. Per-section writes use `graph_node_ids` for targeted snippets and section-scoped flow
+5. Citation verifier checks all bib keys before compile; targeted re-draft if uncovered
+6. Events written to Postgres on each `_emit` (survives agent restarts)
+7. Reference PDFs are ingested via web API routes
+8. User preferences land in `user_{userId}` on settings save
 
 Supermemory runs in Docker on port `6767`. `npx holocron start` includes it in the release stack.
 
@@ -126,6 +134,22 @@ Generation can start from:
 ## Paper generation flow
 
 1. Web creates a `paper_generations` row and POSTs to `/agents/commander/generate`
-2. Commander runs background job: plan → write sections → review loop → compile LaTeX → VLM review
-3. Events stream to job status; web polls `/api/generations/[genId]`
-4. Output: `main.tex`, section files, `main.pdf` under storage
+2. Commander runs background job:
+   - Profile + plan (Semantic Scholar → arXiv fallback)
+   - Build `GraphContract`; store summary in Supermemory
+   - Write sections using `graph_node_ids`, review loop, citation coverage checks
+   - Validate graph contract; re-draft unsatisfied nodes
+   - Citation verifier pass; expand thin sections if below page target
+   - Compile LaTeX → VLM review
+3. Events persist to `generation_events` via `event_store.py`; web polls `/api/generations/[genId]`
+4. Output: `main.tex`, section files, `references.bib`, `main.pdf` under storage
+
+### Process log
+
+| Source | When |
+|--------|------|
+| Agents `on_event` → Postgres | During live generation (durable) |
+| Web API sync from agents RAM | Fallback while job is in-flight |
+| `scripts/backfill-generation-events.mjs` | Reconstruct timeline from disk for completed gens with empty events |
+
+Detail UI (`ProcessLogPanel`) shows phase-grouped events; Supermemory memory events drill down via `DetailPanel`.

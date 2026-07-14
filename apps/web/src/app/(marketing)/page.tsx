@@ -64,7 +64,7 @@ export default function HomePage() {
               <div className="flex h-full flex-col items-center justify-center gap-6">
                 <span className="flex h-24 w-24 items-center justify-center rounded-2xl bg-muted">
                   <Image
-                    src="/holocron.png"
+                    src="/holocron-icon.png"
                     alt="Holocron"
                     width={72}
                     height={72}

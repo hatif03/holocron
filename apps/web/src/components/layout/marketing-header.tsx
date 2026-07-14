@@ -12,7 +12,7 @@ export function MarketingHeader() {
         <Link href="/" className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
             <Image
-              src="/holocron.png"
+              src="/holocron-icon.png"
               alt="Holocron"
               width={24}
               height={24}

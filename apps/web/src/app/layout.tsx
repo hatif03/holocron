@@ -29,8 +29,8 @@ export const metadata: Metadata = {
   description:
     "Map research as a living graph, then generate publication-ready papers with a multi-agent AI system.",
   icons: {
-    icon: "/holocron.png",
-    apple: "/holocron.png",
+    icon: "/holocron-icon.png",
+    apple: "/holocron-icon.png",
   },
 };
 
@@ -48,6 +48,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={cn(
           inter.variable,
           jetbrainsMono.variable,

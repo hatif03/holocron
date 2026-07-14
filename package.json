@@ -28,6 +28,8 @@
     "gen:clear-seeds": "node scripts/clear-seed-generations.mjs",
     "gen:cleanup": "node scripts/cleanup-generations.mjs",
     "gen:verify": "node scripts/verify-live-generation.mjs",
+    "gen:backfill-events": "node scripts/backfill-generation-events.mjs",
+    "gen:repair": "node scripts/repair-generation-sections.mjs",
     "graph:respread": "node scripts/respread-graph-nodes.mjs"
   },
   "devDependencies": {

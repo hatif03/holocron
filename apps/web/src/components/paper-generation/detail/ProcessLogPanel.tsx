@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, CheckCircle2, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { LogEntry, type LogEvent } from "./LogEntry";
 
@@ -22,6 +22,8 @@ interface ProcessLogPanelProps {
   selectedEventIndex: number | null;
   onSelectEvent: (index: number) => void;
   isRunning?: boolean;
+  generationStatus?: string;
+  agentsReachable?: boolean;
 }
 
 interface GroupedPhase {
@@ -55,8 +57,12 @@ function inferPhase(ev: LogEvent): string {
   if (msg.includes("introduction")) return "introduction";
   if (msg.includes("generating") || ev.agent === "Writer") return "body_sections";
   if (ev.agent === "Typesetter") return "typesetting";
-  if (ev.agent === "Reviewer") return "review";
+  if (ev.agent === "Reviewer" || ev.agent === "CitationVerifier") return "review";
   return "default";
+}
+
+function isTerminalStatus(status: string): boolean {
+  return ["completed", "completed_with_warnings", "failed", "cancelled"].includes(status);
 }
 
 export function ProcessLogPanel({
@@ -64,27 +70,61 @@ export function ProcessLogPanel({
   selectedEventIndex,
   onSelectEvent,
   isRunning = false,
+  generationStatus = "",
+  agentsReachable = true,
 }: ProcessLogPanelProps) {
   const groups = groupEvents(events);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const terminal = isTerminalStatus(generationStatus);
 
   return (
     <Card className="p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
       <h2 className="font-medium text-sm mb-3">Process Log</h2>
-      {events.length === 0 && (
+
+      {events.length === 0 && isRunning && (
         <div className="flex items-center gap-3 py-4">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-          <p className="text-sm text-muted-foreground">
-            Waiting for agent activity…
-          </p>
+          <p className="text-sm text-muted-foreground">Waiting for agent activity…</p>
         </div>
       )}
+
+      {events.length === 0 && !isRunning && terminal && (
+        <div className="flex items-start gap-3 py-4">
+          <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p>No log recorded for this generation.</p>
+            <p className="text-xs">
+              Run{" "}
+              <code className="bg-muted px-1 rounded text-[11px]">
+                node scripts/backfill-generation-events.mjs &lt;genId&gt;
+              </code>{" "}
+              to reconstruct from disk artifacts.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {events.length === 0 && !isRunning && !terminal && (
+        <p className="text-sm text-muted-foreground py-4">No events yet.</p>
+      )}
+
+      {!agentsReachable && isRunning && (
+        <div className="mb-3 flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>
+            Agents service unreachable. Check{" "}
+            <a href="/agents" className="underline">/agents</a> health and ensure Docker agents are running.
+          </span>
+        </div>
+      )}
+
       {isRunning && events.length > 0 && (
         <div className="mb-3 flex items-center gap-2 text-xs text-primary">
           <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
           Pipeline active
         </div>
       )}
+
       {groups.map(({ phase, items: evs }) => {
         if (!evs.length) return null;
         const isCollapsed = collapsed[phase];

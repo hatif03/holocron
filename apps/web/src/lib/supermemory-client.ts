@@ -9,6 +9,9 @@ import {
   userTag,
   workTag,
 } from "@holocron/shared";
+import type { MemoryHit, MemoryProfile } from "./memory-types";
+
+export type { MemoryHit, MemoryProfile };
 
 export { LOCAL_USER_ID, workTag, userTag };
 
@@ -92,11 +95,11 @@ export async function storeUserPreference(userId: string, content: string): Prom
   });
 }
 
-export async function searchMemories(
+export async function searchMemoriesRich(
   workId: string,
   query: string,
   limit = 5
-): Promise<string[]> {
+): Promise<MemoryHit[]> {
   if (!isSupermemoryEnabled() || !query.trim()) return [];
   try {
     const resp = await fetch(`${BASE_URL}/v4/search`, {
@@ -110,24 +113,47 @@ export async function searchMemories(
         threshold: 0.6,
       }),
     });
-    if (!(await checkResponse(resp, "searchMemories"))) return [];
+    if (!(await checkResponse(resp, "searchMemoriesRich"))) return [];
     const data = (await resp.json()) as {
-      results?: Array<{ memory?: string; chunk?: string }>;
+      results?: Array<{
+        memory?: string;
+        chunk?: string;
+        score?: number;
+        customId?: string;
+        metadata?: Record<string, string | number | boolean>;
+      }>;
     };
     return (data.results ?? [])
-      .map((r) => r.memory ?? r.chunk ?? "")
-      .filter(Boolean);
+      .map((r) => ({
+        text: r.memory ?? r.chunk ?? "",
+        score: r.score,
+        customId: r.customId,
+        metadata: r.metadata,
+        type: String(r.metadata?.type ?? ""),
+      }))
+      .filter((r) => r.text);
   } catch (e) {
-    logDev("searchMemories unreachable", e);
+    logDev("searchMemoriesRich unreachable", e);
     return [];
   }
 }
 
-export async function profileForWork(
+export async function searchMemories(
+  workId: string,
+  query: string,
+  limit = 5
+): Promise<string[]> {
+  const hits = await searchMemoriesRich(workId, query, limit);
+  return hits.map((h) => h.text);
+}
+
+export async function profileForWorkRich(
   workId: string,
   query?: string
-): Promise<string> {
-  if (!isSupermemoryEnabled()) return "";
+): Promise<{ profile: MemoryProfile; hits: MemoryHit[] }> {
+  if (!isSupermemoryEnabled()) {
+    return { profile: { static: [], dynamic: [] }, hits: [] };
+  }
   try {
     const resp = await fetch(`${BASE_URL}/v4/profile`, {
       method: "POST",
@@ -137,30 +163,57 @@ export async function profileForWork(
         ...(query ? { q: query } : {}),
       }),
     });
-    if (!(await checkResponse(resp, "profileForWork"))) return "";
+    if (!(await checkResponse(resp, "profileForWorkRich"))) {
+      return { profile: { static: [], dynamic: [] }, hits: [] };
+    }
     const data = (await resp.json()) as {
       profile?: { static?: string[]; dynamic?: string[] };
-      searchResults?: { results?: Array<{ memory?: string; chunk?: string }> };
+      searchResults?: {
+        results?: Array<{
+          memory?: string;
+          chunk?: string;
+          score?: number;
+          customId?: string;
+          metadata?: Record<string, string | number | boolean>;
+        }>;
+      };
     };
-    const parts: string[] = [];
-    const profile = data.profile;
-    if (profile?.static?.length) {
-      parts.push("Static profile:\n" + profile.static.join("\n"));
-    }
-    if (profile?.dynamic?.length) {
-      parts.push("Dynamic profile:\n" + profile.dynamic.join("\n"));
-    }
-    const memories = (data.searchResults?.results ?? [])
-      .map((r) => r.memory ?? r.chunk ?? "")
-      .filter(Boolean);
-    if (memories.length) {
-      parts.push("Relevant memories:\n" + memories.join("\n"));
-    }
-    return parts.join("\n\n");
+    const profile = {
+      static: data.profile?.static ?? [],
+      dynamic: data.profile?.dynamic ?? [],
+    };
+    const hits = (data.searchResults?.results ?? [])
+      .map((r) => ({
+        text: r.memory ?? r.chunk ?? "",
+        score: r.score,
+        customId: r.customId,
+        metadata: r.metadata,
+        type: String(r.metadata?.type ?? ""),
+      }))
+      .filter((h) => h.text);
+    return { profile, hits };
   } catch (e) {
-    logDev("profileForWork unreachable", e);
-    return "";
+    logDev("profileForWorkRich unreachable", e);
+    return { profile: { static: [], dynamic: [] }, hits: [] };
   }
+}
+
+export async function profileForWork(
+  workId: string,
+  query?: string
+): Promise<string> {
+  const { profile, hits } = await profileForWorkRich(workId, query);
+  const parts: string[] = [];
+  if (profile.static.length) {
+    parts.push("Static profile:\n" + profile.static.join("\n"));
+  }
+  if (profile.dynamic.length) {
+    parts.push("Dynamic profile:\n" + profile.dynamic.join("\n"));
+  }
+  if (hits.length) {
+    parts.push("Relevant memories:\n" + hits.map((h) => h.text).join("\n"));
+  }
+  return parts.join("\n\n");
 }
 
 export function summarizeReferenceAnalysis(analysis: Record<string, unknown>): string {

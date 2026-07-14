@@ -41,8 +41,10 @@ export async function GET(
     }
 
     let agentStatus = null;
+    let agentsReachable = false;
     try {
       agentStatus = await getGenerationStatus(genId);
+      agentsReachable = true;
     } catch {
       /* agents offline */
     }
@@ -113,6 +115,8 @@ export async function GET(
       events: events.length ? events : agentStatus?.events || [],
       fileTree,
       outputDir: outputDir.replace(/\\/g, "/"),
+      agentsReachable,
+      agentsStatus: agentStatus?.status ?? null,
     });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

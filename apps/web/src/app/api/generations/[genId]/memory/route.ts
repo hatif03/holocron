@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { searchMemories } from "@/lib/supermemory-client";
+import { searchMemoriesRich, isSupermemoryEnabled } from "@/lib/supermemory-client";
 
 export async function GET(
   req: NextRequest,
@@ -15,11 +15,13 @@ export async function GET(
     if (!gen) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const q = req.nextUrl.searchParams.get("q") || String(gen.title || "plan");
-    const results = await searchMemories(String(gen.work_id), q, 6);
+    const hits = await searchMemoriesRich(String(gen.work_id), q, 6);
     return NextResponse.json({
       workId: gen.work_id,
       query: q,
-      results,
+      results: hits.map((h) => h.text),
+      hits,
+      enabled: isSupermemoryEnabled(),
     });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

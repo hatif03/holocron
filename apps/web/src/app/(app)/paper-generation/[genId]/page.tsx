@@ -51,7 +51,7 @@ export default function PaperGenerationDetailPage({
   } | null>(null);
 
   const [memoryResults, setMemoryResults] = useState<string[]>([]);
-
+  const [agentsReachable, setAgentsReachable] = useState(true);
   const [detailMode, setDetailMode] = useState<"search" | "file" | "pdf" | "memory" | null>(null);
 
 
@@ -79,10 +79,9 @@ export default function PaperGenerationDetailPage({
     const json = await res.json();
 
     setGen(json.generation);
-
     setEvents(json.events || []);
-
     setFileTree(json.fileTree || []);
+    setAgentsReachable(json.agentsReachable !== false);
 
   }, [genId]);
 
@@ -216,10 +215,16 @@ export default function PaperGenerationDetailPage({
 
 
 
+  const phaseQuery = (() => {
+    const last = events[events.length - 1];
+    if (!last) return String(gen?.title || "");
+    const section = String(last.metadata?.section || "");
+    const phase = String(last.metadata?.phase || "");
+    return section || phase || String(gen?.title || "");
+  })();
+
   if (!gen) {
-
     return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
-
   }
 
 
@@ -231,31 +236,21 @@ export default function PaperGenerationDetailPage({
       <GenerationHeader gen={gen} genId={genId} onCancel={cancel} />
 
       <SupermemoryContext
-
         genId={genId}
-
         workId={gen.work_id as string | undefined}
-
         title={String(gen.title || "")}
-
         isRunning={isRunning}
-
+        phaseQuery={phaseQuery}
       />
 
-
-
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
-
         <ProcessLogPanel
-
           events={events}
-
           selectedEventIndex={selectedEventIndex}
-
           onSelectEvent={selectEvent}
-
           isRunning={isRunning}
-
+          generationStatus={String(gen.status || "")}
+          agentsReachable={agentsReachable}
         />
 
         <ExplorerPanel

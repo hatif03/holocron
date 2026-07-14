@@ -101,11 +101,11 @@ export default function ReferencesPage() {
                 title: editRef.title,
                 authors: editRef.authors || "",
                 year: editRef.year,
-                url: editRef.url,
-                doi: editRef.doi,
-                notes: editRef.notes,
-                bibtex: editRef.bibtex,
-                source: "manual",
+                url: editRef.url || "",
+                doi: editRef.doi || "",
+                notes: editRef.notes || "",
+                bibtex: editRef.bibtex || "",
+                source: (editRef as { source?: string }).source || "manual",
                 analysis: editRef.analysis as ReferenceItem["analysis"],
               }
             : undefined

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   PaperSearchResult,
   ReferenceAnalysis,
@@ -43,6 +43,29 @@ export function AddReferenceModal({
   );
   const [bibtexOpen, setBibtexOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    if (editRef) {
+      setDraft({
+        title: editRef.title,
+        authors: editRef.authors ?? "",
+        year: editRef.year ?? null,
+        doi: editRef.doi ?? "",
+        url: editRef.url ?? "",
+        notes: editRef.notes ?? "",
+        bibtex: editRef.bibtex ?? "",
+        source: editRef.source ?? "manual",
+        s2_paper_id: editRef.s2_paper_id,
+        pdf_storage_path: editRef.pdf_storage_path,
+        analysis: editRef.analysis,
+      });
+      setStep(2);
+    } else {
+      setDraft(EMPTY_DRAFT);
+      setStep(1);
+    }
+  }, [open, editRef]);
 
   const updateDraft = (patch: Partial<ReferenceDraft>) => {
     setDraft((d) => ({ ...d, ...patch }));
@@ -93,7 +116,7 @@ export function AddReferenceModal({
         onClose={handleClose}
         title={editRef ? "Edit Reference" : "Add New Reference"}
       >
-        <Stepper steps={["Find Paper", "Review & Analyze"]} current={step} />
+        <Stepper steps={["Find Paper", "Review & Analyze"]} current={editRef ? 2 : step} />
 
         {step === 1 && !editRef && (
           <FindPaperStep

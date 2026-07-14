@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import type { ReferenceAnalysis, ReferenceDraft } from "@holocron/shared";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,10 @@ export function ReviewAnalyzeStep({
   const [analysis, setAnalysis] = useState<ReferenceAnalysis | null>(
     draft.analysis || null
   );
+
+  useEffect(() => {
+    setAnalysis(draft.analysis ?? null);
+  }, [draft.analysis]);
 
   const analyze = async () => {
     setAnalyzing(true);

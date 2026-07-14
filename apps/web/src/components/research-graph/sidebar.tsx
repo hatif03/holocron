@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   NODE_CATEGORIES,
   NODE_TYPES,
+  NODE_ICONS,
   getDefaultNodeData,
   getNodeTypeLabel,
   getTypeBadgeColor,
@@ -13,9 +14,11 @@ import {
 import type { Node, Edge } from "@xyflow/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useCanvasStore } from "@/lib/canvas-store";
+import { MemoryPanel } from "./MemoryPanel";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
+  workId: string;
   nodes: Node[];
   edges: Edge[];
   activeTab: string;
@@ -28,6 +31,7 @@ interface SidebarProps {
 }
 
 export function GraphSidebar({
+  workId,
   nodes,
   edges,
   activeTab,
@@ -38,7 +42,7 @@ export function GraphSidebar({
   selectedNodeId,
   onSelectNode,
 }: SidebarProps) {
-  const tabs = ["Nodes", "References", "Work Info"];
+  const tabs = ["Nodes", "References", "Memory", "Work Info"];
   const lastSavedAt = useCanvasStore((s) => s.lastSavedAt);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -53,6 +57,26 @@ export function GraphSidebar({
   const literatureNodes = nodes.filter(
     (n) => (n.data?.nodeType as NodeType) === "literature"
   );
+
+  const [libraryRefs, setLibraryRefs] = useState<
+    { id: string; title: string; authors: string }[]
+  >([]);
+
+  useEffect(() => {
+    fetch("/api/references")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setLibraryRefs(data);
+      })
+      .catch(() => setLibraryRefs([]));
+  }, []);
+
+  const linkedRefIds = new Set(
+    literatureNodes
+      .map((n) => n.data?.reference_id as string)
+      .filter(Boolean)
+  );
+  const linkedLibraryRefs = libraryRefs.filter((r) => linkedRefIds.has(r.id));
 
   const toggleCategory = (key: string) => {
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -123,6 +147,7 @@ export function GraphSidebar({
                                 : "hover:bg-muted"
                             )}
                           >
+                            <span className="text-sm shrink-0">{NODE_ICONS[nodeType]}</span>
                             <span className="truncate flex-1">
                               {node.data?.label as string}
                             </span>
@@ -146,11 +171,28 @@ export function GraphSidebar({
         )}
 
         {activeTab === "References" && (
-          <div className="space-y-2">
+          <div className="space-y-3">
+            {linkedLibraryRefs.length > 0 && (
+              <div>
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">
+                  Library links
+                </div>
+                {linkedLibraryRefs.map((ref) => (
+                  <div
+                    key={ref.id}
+                    className="rounded border border-violet-200 bg-violet-50/50 p-2 text-sm mb-1"
+                  >
+                    <div className="font-medium truncate">{ref.title}</div>
+                    <div className="text-[10px] text-muted-foreground truncate">
+                      {ref.authors}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {literatureNodes.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No literature nodes yet. Add a Literature node to track
-                references.
+                No literature nodes yet. Add a Literature node to track references.
               </p>
             ) : (
               literatureNodes.map((node) => (
@@ -177,6 +219,8 @@ export function GraphSidebar({
             )}
           </div>
         )}
+
+        {activeTab === "Memory" && <MemoryPanel workId={workId} />}
 
         {activeTab === "Work Info" && (
           <div className="space-y-3 text-sm">
@@ -227,20 +271,37 @@ export function AddNodeMenu({
   if (!open) return null;
 
   return (
-    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 bg-card border border-border rounded-xl shadow-xl py-2 max-h-80 overflow-y-auto w-52">
-      {NODE_TYPES.map((type) => (
-        <button
-          key={type}
-          onClick={() => {
-            onAdd(type);
-            onClose();
-          }}
-          className="w-full text-left px-4 py-2 text-sm hover:bg-muted flex items-center gap-2"
-        >
-          <span className="text-xs">{getNodeTypeLabel(type)}</span>
-        </button>
-      ))}
-    </div>
+    <>
+      <button
+        type="button"
+        className="fixed inset-0 z-[15] cursor-default"
+        aria-label="Close add node menu"
+        onClick={onClose}
+      />
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 bg-card border border-border rounded-xl shadow-xl py-2 max-h-80 overflow-y-auto w-64">
+        {Object.entries(NODE_CATEGORIES).map(([key, cat]) => (
+          <div key={key} className="px-2 py-1">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase px-2 py-1">
+              {cat.label}
+            </div>
+            {cat.types.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => {
+                  onAdd(type);
+                  onClose();
+                }}
+                className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-2 rounded-md"
+              >
+                <span className="text-base">{NODE_ICONS[type]}</span>
+                <span>{getNodeTypeLabel(type)}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 

@@ -4,14 +4,14 @@ import { memo, useCallback } from "react";
 import { Handle, Position, NodeResizer, type NodeProps } from "@xyflow/react";
 import {
   getNodeTypeLabel,
-  getNodeDescription,
   NODE_ICONS,
   TYPE_BADGE_STYLES,
   getTypeBadgeColor,
   type NodeType,
 } from "@holocron/shared";
 import { MoreVertical, FileText } from "lucide-react";
-import { NodeFieldRenderer, NodeAiBadges } from "./fields/NodeFieldRenderer";
+import { NodeCanvasSummary } from "./NodeCanvasSummary";
+import { NodeAiBadges } from "./fields/NodeFieldRenderer";
 import {
   useCanvasStore,
   updateNodeData,
@@ -49,15 +49,7 @@ function ResearchNode({ id, data, selected }: NodeProps) {
   const label = (data.label as string) || getNodeTypeLabel(type);
   const status = ((data.status as NodeStatus) || "none") as NodeStatus;
   const color = NODE_COLORS[type] || "border-border bg-card";
-  const workId = useCanvasStore((s) => s.workId);
   const openGenerateModal = useCanvasStore((s) => s.openGenerateModal);
-
-  const onFieldChange = useCallback(
-    (key: string, value: unknown) => {
-      updateNodeData(id, { [key]: value });
-    },
-    [id]
-  );
 
   const onStatusChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -109,20 +101,10 @@ function ResearchNode({ id, data, selected }: NodeProps) {
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-auto px-3 py-2">
+        {/* Body — compact preview on canvas; full fields in inspector */}
+        <div className="flex-1 overflow-hidden px-3 py-2 max-h-32">
           {type === "end" ? (
             <div className="space-y-2">
-              <div className="rounded-lg bg-blue-500/10 border border-blue-400/30 px-2 py-1.5 text-[10px] text-blue-400">
-                {getNodeDescription("end")}
-              </div>
-              <NodeFieldRenderer
-                nodeType={type}
-                data={data as Record<string, unknown>}
-                workId={workId}
-                onChange={onFieldChange}
-                compact
-              />
               <Button
                 size="sm"
                 className="w-full gap-1 text-xs h-8"
@@ -136,12 +118,10 @@ function ResearchNode({ id, data, selected }: NodeProps) {
               </Button>
             </div>
           ) : (
-            <NodeFieldRenderer
+            <NodeCanvasSummary
               nodeType={type}
               data={data as Record<string, unknown>}
-              workId={workId}
-              onChange={onFieldChange}
-              compact
+              label={label}
             />
           )}
         </div>

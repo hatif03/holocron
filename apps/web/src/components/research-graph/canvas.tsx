@@ -23,6 +23,8 @@ import {
   type GeneratePaperConfig,
 } from "@holocron/shared";
 import { Save } from "lucide-react";
+import { BackLink } from "@/components/layout/back-link";
+import { WorkActionsMenu } from "./WorkActionsMenu";
 import { nodeTypes } from "./nodes";
 import { GraphSidebar, AddNodeMenu } from "./sidebar";
 import { NodeInspector } from "./inspector";
@@ -36,6 +38,7 @@ import {
   useCanvasStore,
   registerUpdateNodeData,
 } from "@/lib/canvas-store";
+import { spreadNodes, nodesOverlap } from "@/lib/graph-layout";
 
 interface CanvasEditorProps {
   workId: string;
@@ -46,8 +49,12 @@ interface CanvasEditorProps {
 function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialGraph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
+  const [workTitle, setWorkTitle] = useState(initialWork.title);
+  const [workDescription, setWorkDescription] = useState(initialWork.description);
   const [sidebarTab, setSidebarTab] = useState("Nodes");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [zoom, setZoom] = useState(100);
+  const [canvasTool, setCanvasTool] = useState<"select" | "pan">("select");
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<GeneratePaperConfig>({
     styleGuide: "Nature",
@@ -80,8 +87,14 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
     if (!initialized.current) {
       pushHistory({ nodes: initialGraph.nodes, edges: initialGraph.edges });
       initialized.current = true;
+      if (nodesOverlap(initialGraph.nodes)) {
+        const spread = spreadNodes(initialGraph.nodes, initialGraph.edges);
+        setNodes(spread);
+        pushHistory({ nodes: spread, edges: initialGraph.edges });
+        setTimeout(() => fitView({ duration: 300, padding: 0.3 }), 100);
+      }
     }
-  }, [workId, setWorkId, pushHistory, initialGraph.nodes, initialGraph.edges]);
+  }, [workId, setWorkId, pushHistory, initialGraph.nodes, initialGraph.edges, setNodes, fitView]);
 
   const scheduleHistory = useCallback(
     (nds: Node[], eds: Edge[]) => {
@@ -109,6 +122,19 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
   useEffect(() => {
     registerUpdateNodeData(updateNodeDataFn);
   }, [updateNodeDataFn]);
+
+  useEffect(() => {
+    setZoom(Math.round(getZoom() * 100));
+  }, [getZoom]);
+
+  useEffect(() => {
+    if (!addMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAddMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [addMenuOpen]);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
@@ -156,6 +182,15 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
     fitView({ nodes: [{ id: nodeId }], duration: 300, padding: 0.5 });
   };
 
+  const handleSpreadNodes = useCallback(() => {
+    setNodes((nds) => {
+      const spread = spreadNodes(nds, edges);
+      pushHistory({ nodes: spread, edges });
+      return spread;
+    });
+    setTimeout(() => fitView({ duration: 300, padding: 0.3 }), 150);
+  }, [edges, setNodes, pushHistory, fitView]);
+
   const save = async () => {
     setSaving(true);
     const graph = {
@@ -176,8 +211,8 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: initialWork.title,
-        description: initialWork.description,
+        title: workTitle,
+        description: workDescription,
         graph,
       }),
     });
@@ -201,7 +236,7 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         workId,
-        title: initialWork.title,
+        title: workTitle,
         config,
         graph,
       }),
@@ -230,28 +265,50 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
 
   return (
     <div className="flex h-[calc(100vh-3rem)] flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-serif text-xl font-bold">{initialWork.title}</h1>
-            {initialWork.isTemplate && <Badge variant="template">TEMPLATE</Badge>}
+      <div className="flex items-center justify-between border-b px-4 py-3 gap-4">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <BackLink href="/research-graph" label="Research Graph" className="mt-1" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <Input
+                value={workTitle}
+                onChange={(e) => setWorkTitle(e.target.value)}
+                className="font-serif text-xl font-bold border-0 shadow-none px-0 h-auto focus-visible:ring-0 max-w-md"
+              />
+              {initialWork.isTemplate && <Badge variant="template">TEMPLATE</Badge>}
+            </div>
+            <Input
+              value={workDescription}
+              onChange={(e) => setWorkDescription(e.target.value)}
+              placeholder="Add a description..."
+              className="text-sm text-muted-foreground border-0 shadow-none px-0 h-auto focus-visible:ring-0 mt-0.5"
+            />
           </div>
-          <p className="text-sm text-muted-foreground">{initialWork.description}</p>
         </div>
-        <Button onClick={save} disabled={saving} className="gap-2">
-          <Save className="h-4 w-4" />
-          {saving ? "Saving..." : "Save"}
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <WorkActionsMenu
+            workId={workId}
+            title={workTitle}
+            description={workDescription}
+            onTitleChange={setWorkTitle}
+            onDescriptionChange={setWorkDescription}
+          />
+          <Button onClick={save} disabled={saving} className="gap-2">
+            <Save className="h-4 w-4" />
+            {saving ? "Saving..." : "Save"}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-1 min-h-0">
         <GraphSidebar
+          workId={workId}
           nodes={nodes}
           edges={edges}
           activeTab={sidebarTab}
           onTabChange={setSidebarTab}
-          workTitle={initialWork.title}
-          workDescription={initialWork.description}
+          workTitle={workTitle}
+          workDescription={workDescription}
           isTemplate={initialWork.isTemplate}
           selectedNodeId={selectedNodeId}
           onSelectNode={selectNode}
@@ -269,7 +326,13 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
             nodesConnectable={!nodesLocked}
             elementsSelectable={!nodesLocked}
             onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-            onPaneClick={() => setSelectedNodeId(null)}
+            onPaneClick={() => {
+              setSelectedNodeId(null);
+              setAddMenuOpen(false);
+            }}
+            onMove={() => setZoom(Math.round(getZoom() * 100))}
+            panOnDrag={canvasTool === "pan" ? [0, 1, 2] : [1, 2]}
+            selectionOnDrag={canvasTool === "select"}
             defaultEdgeOptions={{
               type: "smoothstep",
               animated: false,
@@ -291,12 +354,18 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
           )}
 
           <CanvasToolbar
-            zoom={Math.round(getZoom() * 100)}
+            zoom={zoom}
+            tool={canvasTool}
+            onToolChange={setCanvasTool}
             onZoomIn={() => zoomIn({ duration: 200 })}
             onZoomOut={() => zoomOut({ duration: 200 })}
-            onFitView={() => fitView({ duration: 300, padding: 0.2 })}
-            onAddNode={() => setAddMenuOpen(true)}
-            onGenerate={() => setGenModalOpen(true)}
+            onFitView={() => fitView({ duration: 300, padding: 0.3 })}
+            onSpreadNodes={handleSpreadNodes}
+            onAddNode={() => setAddMenuOpen((o) => !o)}
+            onGenerate={() => {
+              setAddMenuOpen(false);
+              setGenModalOpen(true);
+            }}
             onRestoreSnapshot={onRestoreSnapshot}
           />
 

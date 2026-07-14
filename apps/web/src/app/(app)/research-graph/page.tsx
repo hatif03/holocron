@@ -1,45 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Network, Plus, Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
 import { PageHeader } from "@/components/layout/page-header";
-import { formatDate } from "@/lib/utils";
-
-interface Work {
-  id: string;
-  title: string;
-  description: string;
-  is_template: boolean;
-  node_count: string;
-  edge_count: string;
-  ref_count: string;
-  updated_at: string;
-}
+import { WorkCard, type WorkItem } from "@/components/research-graph/WorkCard";
 
 export default function ResearchGraphPage() {
-  const [works, setWorks] = useState<Work[]>([]);
+  const router = useRouter();
+  const [works, setWorks] = useState<WorkItem[]>([]);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editWork, setEditWork] = useState<WorkItem | null>(null);
+  const [deleteWork, setDeleteWork] = useState<WorkItem | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const load = async (q = "") => {
+  const load = useCallback(async (q = "") => {
     const res = await fetch(`/api/works?search=${encodeURIComponent(q)}`);
     const data = await res.json();
     if (Array.isArray(data)) setWorks(data);
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => load(search), 300);
+    return () => clearTimeout(timer);
+  }, [search, load]);
 
   const createWork = async () => {
     if (!title.trim()) return;
@@ -55,10 +50,55 @@ export default function ResearchGraphPage() {
     setTitle("");
     setDescription("");
     if (work.id) {
-      window.location.href = `/research-graph/${work.id}`;
+      router.push(`/research-graph/${work.id}`);
     } else {
-      load();
+      load(search);
     }
+  };
+
+  const saveEdit = async () => {
+    if (!editWork || !title.trim()) return;
+    setLoading(true);
+    await fetch(`/api/works/${editWork.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description }),
+    });
+    setLoading(false);
+    setEditWork(null);
+    setTitle("");
+    setDescription("");
+    load(search);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteWork) return;
+    setLoading(true);
+    const res = await fetch(`/api/works/${deleteWork.id}`, { method: "DELETE" });
+    setLoading(false);
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.error || "Failed to delete work");
+      return;
+    }
+    setDeleteWork(null);
+    load(search);
+  };
+
+  const duplicateWork = async (work: WorkItem) => {
+    const res = await fetch(`/api/works/${work.id}/duplicate`, { method: "POST" });
+    const copy = await res.json();
+    if (copy.id) {
+      router.push(`/research-graph/${copy.id}`);
+    } else {
+      load(search);
+    }
+  };
+
+  const openEdit = (work: WorkItem) => {
+    setEditWork(work);
+    setTitle(work.title);
+    setDescription(work.description || "");
   };
 
   return (
@@ -81,41 +121,38 @@ export default function ResearchGraphPage() {
             placeholder="Search works..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && load(search)}
           />
         </div>
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {works.map((work) => (
-          <Link key={work.id} href={`/research-graph/${work.id}`}>
-            <Card className="p-5 hover:shadow-md transition-shadow cursor-pointer h-full">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="font-semibold line-clamp-2">{work.title}</h3>
-                {work.is_template && <Badge variant="template">Template</Badge>}
-              </div>
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                {work.description || "No description"}
-              </p>
-              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                <span>{work.node_count || 0} nodes</span>
-                <span>{work.edge_count || 0} edges</span>
-                <span>{work.ref_count || 0} refs</span>
-                <span className="ml-auto">{formatDate(work.updated_at)}</span>
-              </div>
-            </Card>
-          </Link>
+          <WorkCard
+            key={work.id}
+            work={work}
+            onEdit={() => openEdit(work)}
+            onDelete={() => setDeleteWork(work)}
+            onDuplicate={() => duplicateWork(work)}
+          />
         ))}
       </div>
 
       {works.length === 0 && (
         <div className="text-center py-16 text-muted-foreground">
           <p className="text-lg mb-2">No research works yet</p>
-          <p className="text-sm">Create your first work to get started</p>
+          <p className="text-sm mb-4">Create your first work to get started</p>
+          <Button onClick={() => setModalOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Work
+          </Button>
         </div>
       )}
 
-      <SimpleDialog open={modalOpen} onClose={() => setModalOpen(false)} title="Create New Research Work">
+      <SimpleDialog
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Create New Research Work"
+      >
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium">
@@ -145,6 +182,58 @@ export default function ResearchGraphPage() {
               Create Work
             </Button>
           </div>
+        </div>
+      </SimpleDialog>
+
+      <SimpleDialog
+        open={!!editWork}
+        onClose={() => setEditWork(null)}
+        title="Edit Research Work"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Title</label>
+            <Input
+              className="mt-1"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Description</label>
+            <Textarea
+              className="mt-1"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setEditWork(null)}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit} disabled={!title.trim() || loading}>
+              Save
+            </Button>
+          </div>
+        </div>
+      </SimpleDialog>
+
+      <SimpleDialog
+        open={!!deleteWork}
+        onClose={() => setDeleteWork(null)}
+        title="Delete Research Work"
+      >
+        <p className="text-sm text-muted-foreground mb-4">
+          Delete &quot;{deleteWork?.title}&quot;? This removes all nodes, edges, and
+          cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setDeleteWork(null)}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={confirmDelete} disabled={loading}>
+            Delete
+          </Button>
         </div>
       </SimpleDialog>
     </div>

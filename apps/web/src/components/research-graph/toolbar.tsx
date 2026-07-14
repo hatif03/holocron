@@ -12,18 +12,21 @@ import {
   Redo2,
   Plus,
   FileText,
+  LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/lib/canvas-store";
 import type { Node, Edge } from "@xyflow/react";
-import { useState } from "react";
 
 interface CanvasToolbarProps {
   zoom: number;
+  tool: "select" | "pan";
+  onToolChange: (tool: "select" | "pan") => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFitView: () => void;
+  onSpreadNodes: () => void;
   onAddNode: () => void;
   onGenerate: () => void;
   onRestoreSnapshot: (snapshot: { nodes: Node[]; edges: Edge[] }) => void;
@@ -31,14 +34,16 @@ interface CanvasToolbarProps {
 
 export function CanvasToolbar({
   zoom,
+  tool,
+  onToolChange,
   onZoomIn,
   onZoomOut,
   onFitView,
+  onSpreadNodes,
   onAddNode,
   onGenerate,
   onRestoreSnapshot,
 }: CanvasToolbarProps) {
-  const [tool, setTool] = useState<"select" | "pan">("select");
   const { nodesLocked, setNodesLocked, undo, redo, canUndo, canRedo } =
     useCanvasStore();
 
@@ -74,14 +79,14 @@ export function CanvasToolbar({
       <ToolbarGroup>
         <ToolbarButton
           active={tool === "select"}
-          onClick={() => setTool("select")}
+          onClick={() => onToolChange("select")}
           title="Select"
         >
           <MousePointer2 className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
           active={tool === "pan"}
-          onClick={() => setTool("pan")}
+          onClick={() => onToolChange("pan")}
           title="Pan"
         >
           <Hand className="h-4 w-4" />
@@ -107,6 +112,14 @@ export function CanvasToolbar({
         </ToolbarButton>
         <ToolbarButton onClick={handleRedo} disabled={!canRedo()} title="Redo">
           <Redo2 className="h-4 w-4" />
+        </ToolbarButton>
+      </ToolbarGroup>
+
+      <Divider />
+
+      <ToolbarGroup>
+        <ToolbarButton onClick={onSpreadNodes} title="Spread nodes">
+          <LayoutGrid className="h-4 w-4" />
         </ToolbarButton>
       </ToolbarGroup>
 

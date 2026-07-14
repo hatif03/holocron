@@ -85,6 +85,20 @@ export async function PUT(
         `;
       }
 
+      const refIds = new Set<string>();
+      for (const node of graph.nodes || []) {
+        const refId = node.data?.reference_id;
+        if (refId && typeof refId === "string") refIds.add(refId);
+      }
+      await db`DELETE FROM work_references WHERE work_id = ${workId}::uuid`;
+      for (const refId of refIds) {
+        await db`
+          INSERT INTO work_references (work_id, reference_id)
+          VALUES (${workId}::uuid, ${refId}::uuid)
+          ON CONFLICT DO NOTHING
+        `;
+      }
+
       await db`UPDATE research_works SET updated_at = NOW() WHERE id = ${workId}::uuid`;
 
       await storeMemory({
@@ -108,6 +122,19 @@ export async function DELETE(
   try {
     const { workId } = await params;
     const db = getDb();
+
+    const [running] = await db`
+      SELECT COUNT(*)::int as count FROM paper_generations
+      WHERE work_id = ${workId}::uuid
+        AND status IN ('running', 'pending')
+    `;
+    if (running?.count > 0) {
+      return NextResponse.json(
+        { error: "Cannot delete work with running paper generations" },
+        { status: 409 }
+      );
+    }
+
     await db`DELETE FROM research_works WHERE id = ${workId}::uuid`;
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface FileDropzoneProps {
   workId: string;
   value: string;
+  fileUrl?: string;
   accept?: string;
   placeholder?: string;
   onChange: (path: string, url?: string) => void;
@@ -16,6 +17,7 @@ interface FileDropzoneProps {
 export function FileDropzone({
   workId,
   value,
+  fileUrl,
   accept,
   placeholder,
   onChange,
@@ -58,6 +60,7 @@ export function FileDropzone({
 
   if (value) {
     const name = value.split("/").pop() || value;
+    const href = fileUrl || `/api/works/files?path=${encodeURIComponent(value)}`;
     return (
       <div
         className={cn(
@@ -67,10 +70,22 @@ export function FileDropzone({
       >
         <FileIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
         <span className="truncate flex-1">{name}</span>
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Open
+        </a>
         <button
           type="button"
-          className="text-primary hover:underline shrink-0"
-          onClick={() => onChange("")}
+          className="text-muted-foreground hover:text-foreground shrink-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange("");
+          }}
         >
           Remove
         </button>
@@ -110,6 +125,11 @@ export function FileDropzone({
           <p className={cn("text-muted-foreground", compact ? "text-[9px]" : "text-[10px]")}>
             {placeholder || "Click or drag file to upload"}
           </p>
+          {accept && (
+            <p className={cn("text-muted-foreground/70 mt-0.5", compact ? "text-[8px]" : "text-[9px]")}>
+              {accept}
+            </p>
+          )}
         </>
       )}
     </div>

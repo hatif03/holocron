@@ -11,7 +11,12 @@ export async function GET(req: NextRequest) {
           SELECT w.*,
             (SELECT COUNT(*) FROM graph_nodes gn WHERE gn.work_id = w.id) as node_count,
             (SELECT COUNT(*) FROM graph_edges ge WHERE ge.work_id = w.id) as edge_count,
-            (SELECT COUNT(*) FROM work_references wr WHERE wr.work_id = w.id) as ref_count
+            (SELECT COUNT(*)::int FROM (
+              SELECT reference_id::text AS rid FROM work_references WHERE work_id = w.id
+              UNION
+              SELECT data->>'reference_id' AS rid FROM graph_nodes
+              WHERE work_id = w.id AND data->>'reference_id' IS NOT NULL AND data->>'reference_id' != ''
+            ) refs) as ref_count
           FROM research_works w
           WHERE w.title ILIKE ${"%" + search + "%"}
           ORDER BY w.updated_at DESC
@@ -20,7 +25,12 @@ export async function GET(req: NextRequest) {
           SELECT w.*,
             (SELECT COUNT(*) FROM graph_nodes gn WHERE gn.work_id = w.id) as node_count,
             (SELECT COUNT(*) FROM graph_edges ge WHERE ge.work_id = w.id) as edge_count,
-            (SELECT COUNT(*) FROM work_references wr WHERE wr.work_id = w.id) as ref_count
+            (SELECT COUNT(*)::int FROM (
+              SELECT reference_id::text AS rid FROM work_references WHERE work_id = w.id
+              UNION
+              SELECT data->>'reference_id' AS rid FROM graph_nodes
+              WHERE work_id = w.id AND data->>'reference_id' IS NOT NULL AND data->>'reference_id' != ''
+            ) refs) as ref_count
           FROM research_works w
           ORDER BY w.updated_at DESC
         `;

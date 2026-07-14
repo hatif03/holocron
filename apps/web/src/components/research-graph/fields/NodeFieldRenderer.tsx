@@ -80,6 +80,7 @@ function FieldInput({
           <FileDropzone
             workId={workId}
             value={strVal}
+            fileUrl={dataUrlFrom(data, field.key)}
             accept={field.accept}
             placeholder={field.placeholder}
             onChange={(path, url) => {
@@ -129,7 +130,7 @@ export function NodeFieldRenderer({
     <div className={compact ? "space-y-2" : "space-y-3"}>
       {schema.fields.map((field) => (
         <div key={field.key}>
-          <TypedFieldLabel field={field} />
+          <TypedFieldLabel field={field} compact={compact} />
           <FieldInput
             field={field}
             value={data[field.key]}

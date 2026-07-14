@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   getNodeDescription,
   getNodeTypeLabel,
   getTypeBadgeColor,
+  getDefaultNodeData,
   NODE_ICONS,
+  NODE_TYPES,
   TYPE_BADGE_STYLES,
   type NodeType,
 } from "@holocron/shared";
@@ -47,6 +50,17 @@ export function NodeInspector({ node, onClose }: InspectorProps) {
 
   const onStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     updateNodeData(node.id, { status: e.target.value });
+  };
+
+  const onTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value as NodeType;
+    const defaults = getDefaultNodeData(newType);
+    updateNodeData(node.id, {
+      nodeType: newType,
+      ...defaults,
+      label: node.data?.label || getNodeTypeLabel(newType),
+      status: node.data?.status || "none",
+    });
   };
 
   const filePath =
@@ -94,6 +108,21 @@ export function NodeInspector({ node, onClose }: InspectorProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Node type</label>
+          <select
+            value={type}
+            onChange={onTypeChange}
+            className="mt-1 w-full h-9 rounded-lg border border-border px-2 text-xs"
+          >
+            {NODE_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {NODE_ICONS[t]} {getNodeTypeLabel(t)}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <p className="text-xs text-muted-foreground">{getNodeDescription(type)}</p>
 
         {type === "end" && (
@@ -116,6 +145,16 @@ export function NodeInspector({ node, onClose }: InspectorProps) {
           />
         )}
 
+        {type === "literature" && (
+          <LiteratureRefPicker
+            value={String(node.data?.reference_id || "")}
+            onSelect={(ref) => {
+              onFieldChange("reference_id", ref.id);
+              if (ref.bibtex) onFieldChange("bibtex", ref.bibtex);
+            }}
+          />
+        )}
+
         <NodeFieldRenderer
           nodeType={type}
           data={node.data as Record<string, unknown>}
@@ -132,5 +171,45 @@ export function NodeInspector({ node, onClose }: InspectorProps) {
         )}
       </div>
     </aside>
+  );
+}
+
+function LiteratureRefPicker({
+  value,
+  onSelect,
+}: {
+  value: string;
+  onSelect: (ref: { id: string; bibtex?: string }) => void;
+}) {
+  const [refs, setRefs] = useState<{ id: string; title: string; bibtex?: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/references")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setRefs(data);
+      })
+      .catch(() => setRefs([]));
+  }, []);
+
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground">Pick from library</label>
+      <select
+        className="mt-1 w-full h-9 rounded-lg border border-border px-2 text-xs"
+        value={value}
+        onChange={(e) => {
+          const ref = refs.find((r) => r.id === e.target.value);
+          if (ref) onSelect(ref);
+        }}
+      >
+        <option value="">— Select reference —</option>
+        {refs.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.title.slice(0, 60)}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }

@@ -2,15 +2,18 @@ FROM node:20-alpine AS base
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/cli/package.json ./packages/cli/
-RUN npm ci --workspace=web --workspace=@holocron/shared
+RUN npm ci --workspace=web --workspace=@holocron/shared --include-workspace-root
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY package.json package-lock.json turbo.json ./
+COPY packages/shared ./packages/shared
+COPY apps/web ./apps/web
+COPY apps/web/public ./apps/web/public
 RUN npm run build --workspace=@holocron/shared
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build --workspace=web

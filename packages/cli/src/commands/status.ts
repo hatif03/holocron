@@ -9,7 +9,7 @@ export async function statusCommand() {
   const services = [
     { name: "Web", url: "http://localhost:3000/health" },
     { name: "Agents", url: "http://localhost:8000/health" },
-    { name: "Supermemory", url: "http://localhost:6767" },
+    { name: "Supermemory", url: "http://localhost:6767/health" },
   ];
 
   for (const svc of services) {

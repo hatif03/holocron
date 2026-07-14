@@ -99,6 +99,10 @@ export async function startCommand() {
     const captured = await waitForSupermemoryKey(envPath);
     if (captured) {
       spinner.succeed("Supermemory API key saved to ~/.holocron/.env");
+      spinner.start("Restarting agents to load Supermemory key...");
+      runDockerCompose(composeFile, ["restart", "agents"], envPath);
+      await waitForUrl(AGENTS_HEALTH, "Agents", 60_000);
+      spinner.succeed("Agents restarted with Supermemory key");
     } else {
       spinner.warn("Supermemory key not found — check docker logs for sm_* key");
     }

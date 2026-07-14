@@ -11,15 +11,24 @@ export default async function AgentsPage() {
     status: "online" as const,
     lastActive: "Just now",
   }));
+  let supermemoryStatus = "unknown";
 
   try {
     const health = await fetchAgentsHealth();
+    supermemoryStatus = health.supermemory || "unknown";
     if (health.agents?.length) {
       agents = health.agents;
     }
   } catch {
-    /* show static registry when agents offline */
+    supermemoryStatus = "unreachable";
   }
+
+  const smBadge =
+    supermemoryStatus === "ok"
+      ? { variant: "success" as const, label: "Supermemory connected" }
+      : supermemoryStatus === "disabled"
+        ? { variant: "default" as const, label: "Supermemory disabled" }
+        : { variant: "default" as const, label: `Supermemory: ${supermemoryStatus}` };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -27,7 +36,12 @@ export default async function AgentsPage() {
         title="Agents"
         description="Service status"
         icon={Bot}
-        actions={<Badge variant="success">● Agent Service is online and running</Badge>}
+        actions={
+          <div className="flex gap-2">
+            <Badge variant={smBadge.variant}>{smBadge.label}</Badge>
+            <Badge variant="success">● Agent Service is online and running</Badge>
+          </div>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

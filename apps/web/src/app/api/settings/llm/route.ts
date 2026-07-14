@@ -4,6 +4,7 @@ import { LOCAL_USER_ID, storeUserPreference } from "@/lib/supermemory-client";
 
 const FALLBACK_PROVIDERS = [
   "k2think",
+  "groq",
   "openai",
   "anthropic",
   "google",

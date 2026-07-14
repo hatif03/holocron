@@ -85,6 +85,38 @@ export async function searchArxiv(
   return { data };
 }
 
+export async function searchGoogleScholar(
+  query: string
+): Promise<{ data: PaperSearchResult[]; error?: string }> {
+  const AGENTS_URL = getAgentsUrl();
+  const res = await fetch(
+    `${AGENTS_URL}/agents/search/google-scholar?q=${encodeURIComponent(query)}&limit=10`
+  );
+  if (!res.ok) return { data: [], error: "Google Scholar search unavailable" };
+  const json = await res.json();
+  const data: PaperSearchResult[] = (json.data || []).map(
+    (p: {
+      id: string;
+      title: string;
+      year?: number | null;
+      authors?: string[];
+      abstract?: string;
+      url?: string;
+      doi?: string;
+    }) => ({
+      id: p.id,
+      title: p.title,
+      year: p.year ?? null,
+      authors: p.authors || [],
+      abstract: p.abstract || "",
+      url: p.url || "",
+      source: "google_scholar" as PaperSearchSource,
+      doi: p.doi || "",
+    })
+  );
+  return { data, error: json.error };
+}
+
 export async function analyzePaper(text: string, filePath?: string) {
   const AGENTS_URL =
     process.env.AGENTS_SERVICE_URL ||
@@ -158,6 +190,7 @@ export async function updateLlmConfig(body: {
   api_key?: string;
   base_url?: string;
   model?: string;
+  keys?: Record<string, string>;
 }) {
   const res = await fetch(`${getAgentsUrl()}/config/llm`, {
     method: "POST",

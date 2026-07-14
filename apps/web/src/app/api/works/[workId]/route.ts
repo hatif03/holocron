@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { storeMemory, summarizeGraph } from "@/lib/supermemory-client";
+import { workTag } from "@holocron/shared";
 
 export async function GET(
   _req: NextRequest,
@@ -84,6 +86,13 @@ export async function PUT(
       }
 
       await db`UPDATE research_works SET updated_at = NOW() WHERE id = ${workId}::uuid`;
+
+      await storeMemory({
+        content: summarizeGraph(graph),
+        containerTag: workTag(workId),
+        customId: `work_${workId}_graph`,
+        metadata: { type: "graph", workId },
+      });
     }
 
     return NextResponse.json({ ok: true });

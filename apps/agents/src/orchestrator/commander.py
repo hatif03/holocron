@@ -191,6 +191,9 @@ async def run_generation(
         )
 
         if enable_review:
+            review_memory = await search_work(
+                req.work_id, f"review feedback {name} {req.title}", limit=3
+            )
             for i in range(max_reviews):
                 await _emit(
                     on_event,
@@ -200,7 +203,12 @@ async def run_generation(
                     {"phase": "review", "section": name},
                 )
                 review = await review_section(
-                    ReviewRequest(section_name=name, content=content, style_guide=style)
+                    ReviewRequest(
+                        section_name=name,
+                        content=content,
+                        style_guide=style,
+                        context={"prior_review_memory": review_memory} if review_memory else None,
+                    )
                 )
                 if review.approved:
                     await _emit(
@@ -210,6 +218,18 @@ async def run_generation(
                         f"Review passed for {name}",
                         {"phase": "review", "section": name},
                     )
+                    if review.feedback:
+                        await store_memory(
+                            f"section: {name}\napproved with note:\n{review.feedback}",
+                            req.work_id,
+                            custom_id=f"gen_{gen_id}_{safe_name}_review_ok",
+                            metadata={
+                                "type": "reviewer",
+                                "generationId": gen_id,
+                                "workId": req.work_id,
+                                "section": name,
+                            },
+                        )
                     break
                 if review.revised_content:
                     content = review.revised_content
@@ -279,8 +299,10 @@ async def run_generation(
         await _emit(on_event, "Typesetter", "agent", f"Compile issues: {compile_result.log[:200]}")
 
     await _emit(on_event, "Vlm Review", "agent", "VlmReviewAgent: Visual layout review of PDF")
+    vlm_summary: dict[str, Any] | None = None
     if pdf_path:
         vlm = await review_pdf(VlmReviewRequest(pdf_path=pdf_path, target_pages=config.get("targetPages", 10)))
+        vlm_summary = {"passed": vlm.passed, "issues": vlm.issues}
         if vlm.passed:
             await _emit(on_event, "Vlm Review", "completed", "Layout review passed")
         else:
@@ -291,6 +313,12 @@ async def run_generation(
                 f"Layout issues found: {len(vlm.issues)}",
                 {"issues": vlm.issues},
             )
+        await store_memory(
+            json.dumps(vlm_summary),
+            req.work_id,
+            custom_id=f"gen_{gen_id}_vlm",
+            metadata={"type": "vlm_review", "generationId": gen_id, "workId": req.work_id},
+        )
 
     await _emit(on_event, "Commander", "completed", f"Paper generation complete ({total_words} words total)")
 

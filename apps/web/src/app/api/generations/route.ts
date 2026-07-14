@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { startGeneration } from "@/lib/agents-client";
+import { syncGenerationsFromStorage } from "@/lib/sync-generations";
 import { buildGraphFromMetadata, LOCAL_USER_ID } from "@holocron/shared";
 import { v4 as uuidv4 } from "uuid";
 
@@ -8,6 +9,10 @@ export async function GET(req: NextRequest) {
   try {
     const search = req.nextUrl.searchParams.get("search") || "";
     const db = getDb();
+
+    // Register on-disk generations (e.g. from CLI) so the dashboard can list them.
+    await syncGenerationsFromStorage(db);
+
     const pattern = search ? `%${search}%` : null;
     const rows = pattern
       ? await db`

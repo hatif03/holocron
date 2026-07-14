@@ -49,6 +49,7 @@ function groupEvents(events: LogEvent[]): GroupedPhase[] {
 
 function inferPhase(ev: LogEvent): string {
   const msg = ev.message.toLowerCase();
+  if (ev.event_type === "memory" || ev.agent === "Supermemory") return "planning";
   if (msg.includes("plan") || ev.agent === "Planner") return "planning";
   if (msg.includes("reference") || msg.includes("search")) return "reference_discovery";
   if (msg.includes("introduction")) return "introduction";

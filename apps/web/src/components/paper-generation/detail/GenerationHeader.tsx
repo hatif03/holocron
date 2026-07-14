@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, Download, ExternalLink } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
+import { BackLink } from "@/components/layout/back-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { generationFilesUrl } from "@/lib/storage-utils";
 
 interface GenerationHeaderProps {
   gen: Record<string, unknown>;
@@ -11,29 +12,16 @@ interface GenerationHeaderProps {
   onCancel?: () => void;
 }
 
-function fileHref(genId: string, pdfPath?: string) {
-  if (!pdfPath) return null;
-  const rel = String(pdfPath).includes("generations/")
-    ? String(pdfPath).replace(/^.*storage[\\/]/, "").replace(/\\/g, "/")
-    : `generations/${genId}/${String(pdfPath).split(/[/\\]/).pop()}`;
-  return `/api/works/files?path=${encodeURIComponent(rel)}`;
-}
-
 export function GenerationHeader({ gen, genId, onCancel }: GenerationHeaderProps) {
   const status = String(gen.status || "pending");
   const isRunning = status === "running" || status === "pending";
   const isCompleted = status.includes("completed");
-  const pdfUrl = fileHref(genId, gen.pdf_path as string);
+  const pdfUrl = generationFilesUrl(genId, gen.pdf_path as string);
 
   return (
     <div className="flex items-start justify-between mb-4 gap-4">
       <div className="flex items-start gap-3 min-w-0">
-        <Link
-          href="/paper-generation"
-          className="mt-1 p-1 rounded hover:bg-muted text-muted-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
+        <BackLink href="/paper-generation" label="Paper Generation" className="mt-1" />
         <div className="min-w-0">
           <h1 className="text-xl font-semibold leading-tight tracking-tight">
             {(gen.title as string) || "Paper Generation"}

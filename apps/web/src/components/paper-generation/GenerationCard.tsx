@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
+import { generationFilesUrl } from "@/lib/storage-utils";
 
 export interface GenerationItem {
   id: string;
@@ -25,11 +26,7 @@ interface GenerationCardProps {
 }
 
 function pdfUrl(genId: string, pdfPath?: string) {
-  if (!pdfPath) return null;
-  const rel = pdfPath.includes("generations/")
-    ? pdfPath.split("storage/").pop() || `generations/${genId}/main.pdf`
-    : `generations/${genId}/${pdfPath.split("/").pop()}`;
-  return `/api/works/files?path=${encodeURIComponent(rel.replace(/^\.?\/?storage\/?/, "").replace(/^\/+/, ""))}`;
+  return generationFilesUrl(genId, pdfPath);
 }
 
 export function GenerationCard({ gen, onDelete }: GenerationCardProps) {

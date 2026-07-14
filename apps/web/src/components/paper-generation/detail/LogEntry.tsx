@@ -25,6 +25,8 @@ export function LogEntry({ event, selected, onClick }: LogEntryProps) {
       ? `${event.metadata.duration_s}s`
       : null;
 
+  const wordCount = event.metadata?.word_count;
+
   return (
     <button
       type="button"
@@ -39,12 +41,25 @@ export function LogEntry({ event, selected, onClick }: LogEntryProps) {
         <div
           className={cn(
             "h-2 w-2 rounded-full shrink-0",
-            event.event_type === "completed" ? "bg-emerald-500" : "bg-primary"
+            event.event_type === "completed"
+              ? "bg-emerald-500"
+              : event.event_type === "search"
+                ? "bg-orange-400"
+                : event.event_type === "found"
+                  ? "bg-emerald-400"
+                  : event.event_type === "llm"
+                    ? "bg-blue-500"
+                    : event.event_type === "memory"
+                      ? "bg-violet-500"
+                      : "bg-primary"
           )}
         />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+            {event.agent}
+          </span>
           <span
             className={cn(
               "text-[10px] px-1.5 py-0.5 rounded font-medium capitalize",
@@ -55,6 +70,9 @@ export function LogEntry({ event, selected, onClick }: LogEntryProps) {
           </span>
           {event.event_type === "completed" && (
             <span className="text-emerald-500 text-xs">✓</span>
+          )}
+          {wordCount != null && (
+            <span className="text-[10px] text-muted-foreground">{String(wordCount)} words</span>
           )}
         </div>
         <p className="text-xs mt-0.5 leading-snug">{event.message}</p>

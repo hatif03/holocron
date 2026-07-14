@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { getGenerationStatus } from "@/lib/agents-client";
 import fs from "fs";
 import path from "path";
+import { getStoragePath } from "@/lib/storage-path";
 
 interface FileNode {
   name: string;
@@ -23,7 +24,7 @@ export async function GET(
     const [gen] = await db`SELECT * FROM paper_generations WHERE id = ${genId}::uuid`;
     if (!gen) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const storagePath = process.env.STORAGE_PATH || "./storage";
+    const storagePath = getStoragePath();
     const outputDir = gen.output_dir || path.join(storagePath, "generations", genId);
 
     if (fileParam) {
@@ -46,7 +47,7 @@ export async function GET(
       /* agents offline */
     }
 
-    if (agentStatus?.result && gen.status === "running") {
+    if (agentStatus?.result && (gen.status === "running" || agentStatus.status?.includes("completed"))) {
       await db`
         UPDATE paper_generations SET
           status = ${agentStatus.status},
@@ -151,6 +152,11 @@ export async function PATCH(
 }
 
 function buildFileTree(dir: string, base = dir): FileNode[] {
+  const raw = _buildRawTree(dir, base);
+  return groupFileTree(raw);
+}
+
+function _buildRawTree(dir: string, base = dir): FileNode[] {
   const nodes: FileNode[] = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
@@ -161,7 +167,7 @@ function buildFileTree(dir: string, base = dir): FileNode[] {
         path: rel,
         size: 0,
         type: "folder",
-        children: buildFileTree(full, base),
+        children: _buildRawTree(full, base),
       });
     } else {
       const stat = fs.statSync(full);
@@ -174,4 +180,40 @@ function buildFileTree(dir: string, base = dir): FileNode[] {
     }
   }
   return nodes;
+}
+
+function groupFileTree(nodes: FileNode[]): FileNode[] {
+  const sections: FileNode[] = [];
+  const rootFiles: FileNode[] = [];
+
+  for (const node of nodes) {
+    if (node.type === "folder" && node.name === "sections" && node.children?.length) {
+      sections.push(...node.children);
+    } else if (node.type === "file") {
+      rootFiles.push(node);
+    } else if (node.type === "folder" && node.name !== "figures") {
+      rootFiles.push(node);
+    }
+  }
+
+  const grouped: FileNode[] = [];
+  if (sections.length) {
+    grouped.push({
+      name: "Sections",
+      path: "sections",
+      size: 0,
+      type: "folder",
+      children: sections,
+    });
+  }
+  if (rootFiles.length) {
+    grouped.push({
+      name: "Root",
+      path: ".",
+      size: 0,
+      type: "folder",
+      children: rootFiles,
+    });
+  }
+  return grouped.length ? grouped : nodes;
 }

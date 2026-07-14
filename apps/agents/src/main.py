@@ -22,6 +22,7 @@ from .agents.metadata import MetadataRequest, generate_from_metadata
 from .agents.vlm_review import VlmPageRequest, VlmReviewRequest, VlmFixRequest, analyze_page, review_pdf, suggest_fixes
 from .orchestrator.commander import GenerateRequest, run_generation
 from .supermemory_client import configure_settings_once, health_status
+from .search.google_scholar import search_google_scholar
 
 app = FastAPI(title="Holocron Agent Service", version="0.1.0")
 
@@ -41,6 +42,7 @@ class LlmConfigUpdate(BaseModel):
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     model: Optional[str] = None
+    keys: Optional[dict[str, str]] = None
 
 
 @app.on_event("startup")
@@ -74,6 +76,13 @@ async def update_llm_config(body: LlmConfigUpdate):
     settings.persist_llm_override()
     llm.reload()
     return settings.public_llm_info()
+
+@app.get("/agents/search/google-scholar")
+async def google_scholar_search(q: str = "", limit: int = 10):
+    if not q.strip():
+        return {"data": []}
+    return await search_google_scholar(q, limit=min(limit, 10))
+
 
 @app.post("/agents/planner/plan")
 async def planner_plan(req: PlanRequest):

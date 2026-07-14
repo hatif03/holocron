@@ -8,6 +8,7 @@ Holocron reads configuration from environment variables. End users typically man
 |------|---------|
 | `~/.holocron/.env` | CLI / Docker release stack (created by `holocron setup`) |
 | `.env` (repo root) | Local development (`cp .env.example .env`) |
+| `apps/web/.env` | Next.js dev server — copy `SUPERMEMORY_*` and `DATABASE_URL` from root `.env` |
 | `{STORAGE_PATH}/llm_config.json` | Runtime LLM override (written by agents or Settings UI) |
 
 On Windows, `~/.holocron` resolves to `C:\Users\<you>\.holocron`.

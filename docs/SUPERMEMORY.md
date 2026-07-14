@@ -146,11 +146,68 @@ curl -X POST http://localhost:6767/v4/search \
 
 ## Cursor workspace
 
-- **MCP:** `.cursor/mcp.json` — Supermemory docs search
+- **MCP (docs):** `.cursor/mcp.json` → `supermemory-ai` — cloud documentation search
+- **MCP (local):** `.cursor/mcp.json` → `supermemory-local` — `http://localhost:6767/mcp` (add `Authorization: Bearer sm_...` header locally; never commit keys)
 - **Skill:** `.cursor/skills/supermemory-local/`
 - **Rule:** `.cursor/rules/supermemory-local.mdc`
 
-## API reference
+## Changelog: pre-Supermemory → current
+
+Holocron originally used **Postgres + file storage only**. The Supermemory integration added a semantic memory layer without replacing CRUD.
+
+| Version | Integration | File / route | Supermemory API | Why added | Why Postgres alone was insufficient |
+|---------|-------------|--------------|-----------------|-----------|-------------------------------------|
+| v0 (baseline) | — | — | — | CRUD only | No semantic recall across sessions |
+| v1 | Pipeline profile | `commander.py` | `POST /v4/profile` | Load work + user context at generation start | Generation rows don't extract durable facts |
+| v1 | Planner search | `planner.py` | `POST /v4/search` (hybrid) | Recall ingested library before Semantic Scholar | S2 only knows public literature |
+| v1 | Section search | `commander.py` | hybrid search | Per-section draft recall | No vector search in Postgres |
+| v1 | Agent output store | `commander.py` | `POST /v3/documents` | Plans, drafts, reviews, milestones | Event logs aren't semantically searchable |
+| v2 | VLM memory | `commander.py` | add | Store layout review issues | PDF compile status lacks layout detail |
+| v2 | Reviewer memory | `commander.py` + `reviewer.py` | search + add | Prior review feedback in context | Reviewer had no memory hook |
+| v2 | Reference summary | `POST /api/references/analyze` | add (compact summary) | Searchable analysis without embedding noise | Full JSON in PG requires exact ID fetch |
+| v2 | Graph snapshot | `PUT /api/works/[workId]` | add | Hypothesis structure recall | Graph JSON in PG isn't injected into prompts |
+| v2 | Memory search API | `GET /api/works/[workId]/memory/search` | hybrid search | UI/API library search | No web-side search before |
+| v1 | PDF ingest | upload routes | `POST /v3/documents/file` | OCR/chunk PDFs | Disk blobs opaque to agents |
+| v1 | User prefs | `POST /api/settings/llm` | add → `user_{id}` | Cross-work style recall | `llm_config.json` is operational, not semantic |
+| v1 | Settings bootstrap | `main.py`, web client | `PATCH /v3/settings` | Holocron-specific extraction filter | No PG equivalent |
+| fix | Docker env | `docker-compose.yml` | — | `env_file` for agents/web; removed empty `${SUPERMEMORY_API_KEY:-}` override | Compose substitution was clearing keys |
+
+## OpenAPI alignment
+
+Holocron calls map to Supermemory Local OpenAPI (`http://localhost:6767/v4/openapi`):
+
+| Holocron function | HTTP | OpenAPI path |
+|-------------------|------|--------------|
+| `store_memory` / `storeMemory` | POST | `/v3/documents` |
+| `ingestReferencePdf` | POST | `/v3/documents/file` |
+| `search_work` / `searchMemories` | POST | `/v4/search` |
+| `context_for_work` / `profileForWork` | POST | `/v4/profile` |
+| `configure_settings_once` | PATCH | `/v3/settings` |
+| `health_status` | GET | `/health` |
+| Cursor MCP (local) | — | `/mcp` |
+
+## Redundancy matrix
+
+| Data | Postgres / disk | Supermemory | Intentional? | v2 change |
+|------|-----------------|-------------|--------------|-----------|
+| Reference analysis | `references_lib.analysis` (full JSON) | Compact summary via `summarizeReferenceAnalysis` | Yes — different roles | Reduced SM payload |
+| Generation events | `generation_events` timeline | Full plan/draft/review text | Yes | — |
+| PDF files | `STORAGE_PATH` | Chunked index | Yes | `customId: ref_{id}` on ingest |
+| LLM config | `llm_config.json` | Preference string | Yes | — |
+| Graph | `graph_nodes` / `graph_edges` | Summary snapshot on save | Yes | Added in v2 |
+
+## Client strategy
+
+| Runtime | Client | Rationale |
+|---------|--------|-----------|
+| Python agents | `supermemory` pip SDK ≥3.50 | Profile/search/add typed APIs |
+| Next.js web | Raw `fetch` | No npm SDK aligned with Local v0.0.5; server-side only |
+| Shared tags | `@holocron/shared` `workTag` / `userTag` | Single source for `containerTag` strings |
+
+## Testing
+
+See [TESTING.md](TESTING.md) for pytest, Vitest, and Playwright commands. Supermemory contract tests mock HTTP; live smoke tests use `curl` against `:6767`.
+
 
 Canonical endpoints (local server):
 

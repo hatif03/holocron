@@ -30,8 +30,9 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_MODEL: ${LLM_MODEL:-}
       K2THINK_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
-      K2THINK_BASE_URL: ${K2THINK_BASE_URL:-https://www.k2think.ai/api/chat/completions}
+      K2THINK_BASE_URL: ${K2THINK_BASE_URL:-https://api.k2think.ai/v1/chat/completions}
       K2THINK_MODEL: ${K2THINK_MODEL:-MBZUAI-IFM/K2-Think-v2}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
@@ -47,7 +48,7 @@ services:
     volumes:
       - ../apps/agents:/app
       - ../templates:/app/templates:ro
-      - storage_data:/data/storage
+      - ../storage:/data/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,7 +61,7 @@ services:
     ports:
       - "8081:8080"
     volumes:
-      - storage_data:/data/storage
+      - ../storage:/data/storage
 
   web:
     build:
@@ -83,7 +84,7 @@ services:
     volumes:
       - ../apps/web:/app/apps/web
       - ../packages:/app/packages
-      - storage_data:/data/storage
+      - ../storage:/data/storage
     depends_on:
       - postgres
       - agents

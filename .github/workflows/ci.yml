@@ -40,7 +40,57 @@ jobs:
 
       - name: Validate agents imports
         run: |
-          pip install -r apps/agents/requirements.txt
+          pip install -r requirements.txt
           python -c "from src.main import app; print(app.title)"
-
         working-directory: apps/agents
+
+  test-shared:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run test --workspace=@holocron/shared
+
+  test-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=@holocron/shared
+      - run: npm run test --workspace=web
+
+  test-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run test --workspace=holocron
+
+  test-agents:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run pytest
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+          pytest
+        working-directory: apps/agents
+        env:
+          K2THINK_API_KEY: mock-key-for-dev
+          DATABASE_URL: postgresql://holocron:holocron@localhost:5432/holocron
+          STORAGE_PATH: ./storage

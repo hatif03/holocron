@@ -1,0 +1,53 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build --workspace=@holocron/shared
+
+      - name: Start stack
+        run: |
+          docker compose -f docker/docker-compose.yml up -d postgres agents supermemory latex
+          timeout 120 bash -c 'until curl -sf http://localhost:8000/health; do sleep 2; done'
+
+      - name: Start web dev server
+        run: npm run dev --workspace=web &
+        env:
+          DATABASE_URL: postgresql://holocron:holocron@localhost:5432/holocron
+          K2THINK_API_KEY: mock-key-for-dev
+          SUPERMEMORY_API_URL: http://localhost:6767
+          SUPERMEMORY_API_KEY: ""
+
+      - name: Wait for web
+        run: timeout 120 bash -c 'until curl -sf http://localhost:3000/health; do sleep 2; done'
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+        working-directory: apps/web
+
+      - name: Run Playwright
+        run: npm run test:e2e --workspace=web
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/

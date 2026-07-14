@@ -33,8 +33,9 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Holocron local data
-.holocron/
+# Test artifacts
+apps/web/test-results/
+apps/web/playwright-report/
 
 # LaTeX
 *.aux

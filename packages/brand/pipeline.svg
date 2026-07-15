@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" fill="none">
+  <defs>
+    <linearGradient id="pipe" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="oklch(0.52 0.19 263)" />
+      <stop offset="100%" stop-color="oklch(0.62 0.17 155)" />
+    </linearGradient>
+  </defs>
+  <rect x="10" y="40" width="100" height="40" rx="6" fill="url(#pipe)" opacity="0.15" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <text x="60" y="66" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="oklch(0.16 0.006 285)">Planner</text>
+  <path d="M110 60 H140" stroke="oklch(0.52 0.19 263)" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="140" y="40" width="90" height="40" rx="6" fill="url(#pipe)" opacity="0.15" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <text x="185" y="66" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="oklch(0.16 0.006 285)">Writer</text>
+  <path d="M230 60 H260" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <rect x="260" y="40" width="100" height="40" rx="6" fill="url(#pipe)" opacity="0.15" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <text x="310" y="66" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="oklch(0.16 0.006 285)">Reviewer</text>
+  <path d="M360 60 H390" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <rect x="390" y="40" width="130" height="40" rx="6" fill="url(#pipe)" opacity="0.15" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <text x="455" y="66" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="oklch(0.16 0.006 285)">Citation Verifier</text>
+  <path d="M520 60 H550" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <rect x="550" y="40" width="110" height="40" rx="6" fill="url(#pipe)" opacity="0.15" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <text x="605" y="66" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="oklch(0.16 0.006 285)">Typesetter</text>
+  <path d="M660 60 H690" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <rect x="690" y="40" width="100" height="40" rx="6" fill="url(#pipe)" opacity="0.15" stroke="oklch(0.52 0.19 263)" stroke-width="2"/>
+  <text x="740" y="66" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="oklch(0.16 0.006 285)">VLM Review</text>
+</svg>

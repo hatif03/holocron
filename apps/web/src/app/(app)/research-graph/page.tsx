@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Network, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageToolbar } from "@/components/layout/page-toolbar";
 import { WorkCard, type WorkItem } from "@/components/research-graph/WorkCard";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ResearchGraphPage() {
   const router = useRouter();
@@ -102,51 +103,52 @@ export default function ResearchGraphPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <PageHeader
+    <div className="flex h-full min-h-0 flex-col">
+      <PageToolbar
         title="Research Graph"
         description="Visual map of your research"
-        icon={Network}
         actions={
-          <Button onClick={() => setModalOpen(true)} className="gap-2 shrink-0">
-            <Plus className="h-4 w-4" />
+          <Button size="sm" onClick={() => setModalOpen(true)} className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" />
             New Work
           </Button>
         }
       >
-        <div className="relative max-w-xl">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative w-48 sm:w-56">
+          <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="pl-10"
+            className="h-8 pl-8 text-sm"
             placeholder="Search works..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-      </PageHeader>
+      </PageToolbar>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {works.map((work) => (
-          <WorkCard
-            key={work.id}
-            work={work}
-            onEdit={() => openEdit(work)}
-            onDelete={() => setDeleteWork(work)}
-            onDuplicate={() => duplicateWork(work)}
-          />
-        ))}
-      </div>
-
-      {works.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground">
-          <p className="text-lg mb-2">No research works yet</p>
-          <p className="text-sm mb-4">Create your first work to get started</p>
-          <Button onClick={() => setModalOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Work
-          </Button>
+      <ScrollArea className="flex-1">
+        <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {works.map((work) => (
+            <WorkCard
+              key={work.id}
+              work={work}
+              onEdit={() => openEdit(work)}
+              onDelete={() => setDeleteWork(work)}
+              onDuplicate={() => duplicateWork(work)}
+            />
+          ))}
         </div>
-      )}
+
+        {works.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <p className="mb-1 text-sm font-medium">No research works yet</p>
+            <p className="mb-4 text-xs">Create your first work to get started</p>
+            <Button size="sm" onClick={() => setModalOpen(true)} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" />
+              New Work
+            </Button>
+          </div>
+        )}
+      </ScrollArea>
 
       <SimpleDialog
         open={modalOpen}
@@ -193,11 +195,7 @@ export default function ResearchGraphPage() {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium">Title</label>
-            <Input
-              className="mt-1"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <Input className="mt-1" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div>
             <label className="text-sm font-medium">Description</label>
@@ -223,9 +221,9 @@ export default function ResearchGraphPage() {
         onClose={() => setDeleteWork(null)}
         title="Delete Research Work"
       >
-        <p className="text-sm text-muted-foreground mb-4">
-          Delete &quot;{deleteWork?.title}&quot;? This removes all nodes, edges, and
-          cannot be undone.
+        <p className="mb-4 text-sm text-muted-foreground">
+          Delete &quot;{deleteWork?.title}&quot;? This removes all nodes, edges, and cannot be
+          undone.
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setDeleteWork(null)}>

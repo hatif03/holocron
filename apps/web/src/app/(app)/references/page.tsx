@@ -1,18 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ReferenceCard, type ReferenceItem } from "@/components/references/ReferenceCard";
 import { AddReferenceModal } from "@/components/references/AddReferenceModal";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageToolbar } from "@/components/layout/page-toolbar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ReferencesPage() {
   const [refs, setRefs] = useState<ReferenceItem[]>([]);
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
-  const [editRef, setEditRef] = useState<(ReferenceItem & { bibtex?: string; doi?: string; notes?: string; url?: string }) | null>(null);
+  const [editRef, setEditRef] = useState<
+    (ReferenceItem & { bibtex?: string; doi?: string; notes?: string; url?: string }) | null
+  >(null);
 
   const load = async (q = "") => {
     const url = q
@@ -36,56 +39,58 @@ export default function ReferencesPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <PageHeader
+    <div className="flex h-full min-h-0 flex-col">
+      <PageToolbar
         title="References"
         description="Papers and BibTeX library"
-        icon={BookOpen}
         actions={
           <Button
+            size="sm"
             onClick={() => {
               setEditRef(null);
               setAddOpen(true);
             }}
-            className="gap-2"
+            className="gap-1.5"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             Add Reference
           </Button>
         }
       >
-        <div className="flex max-w-xl gap-2">
+        <div className="flex w-48 gap-1.5 sm:w-56">
           <Input
+            className="h-8 flex-1 text-sm"
             placeholder="Search references..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="flex-1"
           />
-          <Button onClick={handleSearch} variant="outline" className="gap-1">
-            <Search className="h-4 w-4" />
+          <Button size="sm" variant="outline" className="h-8 px-2" onClick={handleSearch}>
+            <Search className="h-3.5 w-3.5" />
           </Button>
         </div>
-      </PageHeader>
+      </PageToolbar>
 
-      <div className="space-y-3">
-        {refs.map((ref) => (
-          <ReferenceCard
-            key={ref.id}
-            reference={ref}
-            onEdit={() => {
-              setEditRef(ref);
-              setAddOpen(true);
-            }}
-            onDelete={() => handleDelete(ref.id)}
-          />
-        ))}
-        {refs.length === 0 && (
-          <p className="text-center text-muted-foreground py-12">
-            No references yet. Click Add Reference to get started.
-          </p>
-        )}
-      </div>
+      <ScrollArea className="flex-1">
+        <div className="space-y-2 p-3">
+          {refs.map((ref) => (
+            <ReferenceCard
+              key={ref.id}
+              reference={ref}
+              onEdit={() => {
+                setEditRef(ref);
+                setAddOpen(true);
+              }}
+              onDelete={() => handleDelete(ref.id)}
+            />
+          ))}
+          {refs.length === 0 && (
+            <p className="py-16 text-center text-sm text-muted-foreground">
+              No references yet. Click Add Reference to get started.
+            </p>
+          )}
+        </div>
+      </ScrollArea>
 
       <AddReferenceModal
         open={addOpen}
@@ -105,7 +110,11 @@ export default function ReferencesPage() {
                 doi: editRef.doi || "",
                 notes: editRef.notes || "",
                 bibtex: editRef.bibtex || "",
-                source: (editRef as { source?: string }).source || "manual",
+                source: ((editRef as { source?: string }).source || "manual") as
+                  | "arxiv"
+                  | "semantic_scholar"
+                  | "google_scholar"
+                  | "manual",
                 analysis: editRef.analysis as ReferenceItem["analysis"],
               }
             : undefined

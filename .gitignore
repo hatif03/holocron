@@ -58,3 +58,6 @@ generation-artifacts/
 
 # Docker
 *.log
+
+# npm pack artifacts
+*.tgz

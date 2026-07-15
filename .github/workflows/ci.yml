@@ -24,7 +24,7 @@ jobs:
         run: npm run build --workspace=@holocron/shared
 
       - name: Build CLI
-        run: npm run build --workspace=holocron
+        run: npm run build --workspace=holocron-research
 
       - name: Lint web
         run: npm run lint --workspace=web
@@ -76,7 +76,37 @@ jobs:
           node-version: "20"
           cache: npm
       - run: npm ci
-      - run: npm run test --workspace=holocron
+      - run: npm run test --workspace=holocron-research
+
+  test-cli-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: node scripts/copy-cli-migrations.mjs
+      - run: npm run build --workspace=holocron-research
+      - name: Pack and smoke-test CLI
+        working-directory: packages/cli
+        run: |
+          npm pack
+          npm install -g holocron-research-1.0.0.tgz
+          holocron --version
+          holocron install-guide | head -5
+
+  test-marketing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=marketing
 
   test-agents:
     runs-on: ubuntu-latest

@@ -2,14 +2,20 @@
 
 **Holocron** is a local-first AI research platform. Map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready LaTeX and PDF output through a multi-agent writing pipeline. The UI follows a **Research Workbench** aesthetic — calm, data-dense surfaces for long research sessions; inference is bring-your-own-key (BYOK).
 
-Everything runs on your machine. Docker Desktop is the only prerequisite for end users.
+Everything runs on your machine. **Prerequisites:** [Node.js 20+](https://nodejs.org/) and [Docker Desktop](https://www.docker.com/products/docker-desktop/) — see the [install guide](https://holocron.vercel.app/install) or run `holocron install-guide`.
+
+Marketing site: [holocron.vercel.app](https://holocron.vercel.app) (deploy `apps/marketing` to Vercel).
 
 ---
 
 ## Quick start
 
 ```bash
-npx holocron start
+# 1. Verify prerequisites (Node 20+, Docker running, ports free)
+npx holocron-research@latest doctor
+
+# 2. First run — setup wizard + Docker images + browser
+npx holocron-research@latest start
 ```
 
 First run:
@@ -29,7 +35,8 @@ Holocron uses [Supermemory Local](https://supermemory.ai/docs/self-hosting/overv
 |---------|-------------|
 | `holocron start` | Start the full stack |
 | `holocron setup` | Configure LLM provider and API keys |
-| `holocron doctor` | Check Docker, Node, and port availability |
+| `holocron doctor` | Check Node, Docker, Compose, and port availability |
+| `holocron install-guide` | Step-by-step install for fresh systems |
 | `holocron status` | Show service health |
 | `holocron stop` | Tear down containers |
 
@@ -146,7 +153,7 @@ Open [http://localhost:3000](http://localhost:3000).
 holocron/
 ├── apps/web/           Next.js 15 frontend
 ├── apps/agents/        Python FastAPI agent service
-├── packages/cli/       holocron npm CLI (npx holocron)
+├── packages/cli/       holocron-research npm CLI (`npx holocron-research@latest`)
 ├── packages/shared/    Shared Zod schemas and types
 ├── templates/          LaTeX venue templates
 ├── docker/             Docker Compose stacks

@@ -11,7 +11,7 @@ npm test
 # Individual workspaces
 npm run test --workspace=@holocron/shared
 npm run test --workspace=web
-npm run test --workspace=holocron
+npm run test --workspace=holocron-research
 cd apps/agents && pip install -r requirements.txt -r requirements-dev.txt && pytest
 
 # E2E (stack must be running on :3000)

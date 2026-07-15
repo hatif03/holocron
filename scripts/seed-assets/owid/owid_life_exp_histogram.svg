@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="300" viewBox="0 0 520 300">
+  <rect width="100%" height="100%" fill="#fafafa"/>
+  <text x="260" y="24" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="600">Life expectancy distribution (countries, 2023)</text>
+  <line x1="48" y1="252" x2="500" y2="252" stroke="#ccc"/>
+  <rect x="48" y="242.57777777777778" width="52.5" height="9.422222222222222" fill="#0ea5e9" rx="2"/>
+  <text x="74.25" y="272" text-anchor="middle" font-size="10" fill="#666">50</text>
+  <rect x="104.5" y="228.44444444444446" width="52.5" height="23.555555555555554" fill="#0ea5e9" rx="2"/>
+  <text x="130.75" y="272" text-anchor="middle" font-size="10" fill="#666">55</text>
+  <rect x="161" y="195.46666666666667" width="52.5" height="56.53333333333333" fill="#0ea5e9" rx="2"/>
+  <text x="187.25" y="272" text-anchor="middle" font-size="10" fill="#666">60</text>
+  <rect x="217.5" y="120.08888888888887" width="52.5" height="131.91111111111113" fill="#0ea5e9" rx="2"/>
+  <text x="243.75" y="272" text-anchor="middle" font-size="10" fill="#666">65</text>
+  <rect x="274" y="40" width="52.5" height="212" fill="#0ea5e9" rx="2"/>
+  <text x="300.25" y="272" text-anchor="middle" font-size="10" fill="#666">70</text>
+  <rect x="330.5" y="72.97777777777779" width="52.5" height="179.0222222222222" fill="#0ea5e9" rx="2"/>
+  <text x="356.75" y="272" text-anchor="middle" font-size="10" fill="#666">75</text>
+  <rect x="387" y="148.35555555555555" width="52.5" height="103.64444444444445" fill="#0ea5e9" rx="2"/>
+  <text x="413.25" y="272" text-anchor="middle" font-size="10" fill="#666">80</text>
+  <rect x="443.5" y="214.3111111111111" width="52.5" height="37.68888888888889" fill="#0ea5e9" rx="2"/>
+  <text x="469.75" y="272" text-anchor="middle" font-size="10" fill="#666">85</text>
+  <text x="260" y="292" text-anchor="middle" font-size="11" fill="#666">Life expectancy (years)</text>
+</svg>

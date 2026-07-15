@@ -168,6 +168,136 @@ export function writeRagMetricsSvg(destPath) {
   });
 }
 
+function writeBarChartSvg(filePath, { title, labels, values, barColor = "#4f46e5" }) {
+  const w = 520;
+  const h = 300;
+  const pad = { l: 56, r: 20, t: 40, b: 72 };
+  const maxV = Math.max(...values, 1);
+  const barW = (w - pad.l - pad.r) / Math.max(labels.length, 1) - 8;
+  const bars = labels
+    .map((label, i) => {
+      const v = values[i] ?? 0;
+      const barH = ((v / maxV) * (h - pad.t - pad.b)) | 0;
+      const x = pad.l + i * (barW + 8);
+      const y = h - pad.b - barH;
+      return `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${barColor}" rx="2"/>
+  <text x="${x + barW / 2}" y="${h - 52}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#444" transform="rotate(-35 ${x + barW / 2} ${h - 52})">${label}</text>`;
+    })
+    .join("\n  ");
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <rect width="100%" height="100%" fill="#fafafa"/>
+  <text x="${w / 2}" y="24" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="600">${title}</text>
+  <line x1="${pad.l}" y1="${h - pad.b}" x2="${w - pad.r}" y2="${h - pad.b}" stroke="#ccc"/>
+  ${bars}
+</svg>`;
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, svg, "utf8");
+}
+
+export function writeOwidEmissionsBarSvg(destPath) {
+  writeBarChartSvg(destPath, {
+    title: "CO₂ emissions per capita (2023, t)",
+    labels: ["USA", "China", "India", "Germany", "Brazil", "UK", "Japan"],
+    values: [14.9, 8.2, 2.0, 8.1, 2.2, 5.2, 8.5],
+    barColor: "#dc2626",
+  });
+}
+
+export function writeOwidLifeExpHistogramSvg(destPath) {
+  const w = 520;
+  const h = 300;
+  const pad = { l: 48, r: 20, t: 40, b: 48 };
+  const bins = [50, 55, 60, 65, 70, 75, 80, 85];
+  const counts = [2, 5, 12, 28, 45, 38, 22, 8];
+  const maxC = Math.max(...counts);
+  const barW = (w - pad.l - pad.r) / bins.length - 4;
+  const bars = bins
+    .map((b, i) => {
+      const c = counts[i];
+      const barH = (c / maxC) * (h - pad.t - pad.b);
+      const x = pad.l + i * (barW + 4);
+      const y = h - pad.b - barH;
+      return `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="#0ea5e9" rx="2"/>
+  <text x="${x + barW / 2}" y="${h - 28}" text-anchor="middle" font-size="10" fill="#666">${b}</text>`;
+    })
+    .join("\n  ");
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <rect width="100%" height="100%" fill="#fafafa"/>
+  <text x="${w / 2}" y="24" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="600">Life expectancy distribution (countries, 2023)</text>
+  <line x1="${pad.l}" y1="${h - pad.b}" x2="${w - pad.r}" y2="${h - pad.b}" stroke="#ccc"/>
+  ${bars}
+  <text x="${w / 2}" y="${h - 8}" text-anchor="middle" font-size="11" fill="#666">Life expectancy (years)</text>
+</svg>`;
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  fs.writeFileSync(destPath, svg, "utf8");
+}
+
+export async function downloadOwidCsv(slug, destPath) {
+  const url = `https://ourworldindata.org/grapher/${slug}.csv?v=1&csvType=full&useColumnShortNames=false`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Holocron research seed/1.0" },
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!res.ok) throw new Error(`OWID download failed: ${slug} HTTP ${res.status}`);
+  const text = await res.text();
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  fs.writeFileSync(destPath, text, "utf8");
+  return destPath;
+}
+
+/** Sample OWID long-format CSV to a compact cross-country panel. */
+export function sampleOwidPanel(co2CsvText, lifeCsvText) {
+  const countries = new Set([
+    "United States",
+    "China",
+    "India",
+    "Germany",
+    "Brazil",
+    "United Kingdom",
+    "Japan",
+    "France",
+    "Nigeria",
+    "Australia",
+  ]);
+  const years = new Set();
+  for (let y = 1990; y <= 2023; y++) years.add(String(y));
+
+  function parseLongCsv(text, valueCol) {
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const header = lines[0].split(",");
+    const entityIdx = header.indexOf("Entity");
+    const yearIdx = header.indexOf("Year");
+    const valIdx = header.findIndex((h) => h.includes(valueCol) || h === valueCol);
+    const map = new Map();
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(",");
+      const entity = cols[entityIdx];
+      const year = cols[yearIdx];
+      if (!countries.has(entity) || !years.has(year)) continue;
+      const val = cols[valIdx];
+      if (!map.has(entity)) map.set(entity, {});
+      map.get(entity)[year] = val;
+    }
+    return map;
+  }
+
+  const co2 = parseLongCsv(co2CsvText, "emissions");
+  const life = parseLongCsv(lifeCsvText, "expectancy");
+  const rows = ["Entity,Year,co2_per_capita,life_expectancy"];
+  for (const c of countries) {
+    for (const y of years) {
+      const co2v = co2.get(c)?.[y] ?? "";
+      const lifev = life.get(c)?.[y] ?? "";
+      if (co2v || lifev) {
+        rows.push(`${c},${y},${co2v},${lifev}`);
+      }
+    }
+  }
+  return rows.join("\n");
+}
+
 export function resolveRefForNode(n, refs, workTitle) {
   if (n.refIndex == null) return { data: { ...n.data }, ref: null };
   const data = { ...n.data };

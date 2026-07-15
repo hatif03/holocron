@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="300" viewBox="0 0 520 300">
+  <rect width="100%" height="100%" fill="#fafafa"/>
+  <text x="260" y="24" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="600">CO₂ emissions per capita (2023, t)</text>
+  <line x1="56" y1="228" x2="500" y2="228" stroke="#ccc"/>
+  <rect x="56" y="40" width="55.42857142857143" height="188" fill="#dc2626" rx="2"/>
+  <text x="83.71428571428572" y="248" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#444" transform="rotate(-35 83.71428571428572 248)">USA</text>
+  <rect x="119.42857142857143" y="125" width="55.42857142857143" height="103" fill="#dc2626" rx="2"/>
+  <text x="147.14285714285714" y="248" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#444" transform="rotate(-35 147.14285714285714 248)">China</text>
+  <rect x="182.85714285714286" y="203" width="55.42857142857143" height="25" fill="#dc2626" rx="2"/>
+  <text x="210.57142857142858" y="248" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#444" transform="rotate(-35 210.57142857142858 248)">India</text>
+  <rect x="246.28571428571428" y="126" width="55.42857142857143" height="102" fill="#dc2626" rx="2"/>
+  <text x="274" y="248" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#444" transform="rotate(-35 274 248)">Germany</text>
+  <rect x="309.7142857142857" y="201" width="55.42857142857143" height="27" fill="#dc2626" rx="2"/>
+  <text x="337.42857142857144" y="248" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#444" transform="rotate(-35 337.42857142857144 248)">Brazil</text>
+  <rect x="373.14285714285717" y="163" width="55.42857142857143" height="65" fill="#dc2626" rx="2"/>
+  <text x="400.8571428571429" y="248" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#444" transform="rotate(-35 400.8571428571429 248)">UK</text>
+  <rect x="436.57142857142856" y="121" width="55.42857142857143" height="107" fill="#dc2626" rx="2"/>
+  <text x="464.2857142857143" y="248" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#444" transform="rotate(-35 464.2857142857143 248)">Japan</text>
+</svg>

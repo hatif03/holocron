@@ -272,3 +272,56 @@ export async function ingestReferencePdf(
     logDev("ingestReferencePdf unreachable", e);
   }
 }
+
+const TEXT_EXCERPT_MAX = 8000;
+
+function readTextExcerpt(filePath: string): string {
+  try {
+    const raw = fs.readFileSync(filePath, "utf8");
+    return raw.length > TEXT_EXCERPT_MAX
+      ? raw.slice(0, TEXT_EXCERPT_MAX) + "\n…[truncated]"
+      : raw;
+  } catch {
+    return "";
+  }
+}
+
+export async function ingestWorkFile(
+  filePath: string,
+  workId: string,
+  mimeOrExt?: string
+): Promise<void> {
+  if (!isSupermemoryEnabled() || !fs.existsSync(filePath)) return;
+
+  const ext = (mimeOrExt || filePath.split(/[/\\]/).pop() || "")
+    .toLowerCase()
+    .replace(/^.*\./, ".");
+  const normalizedExt = ext.startsWith(".") ? ext : `.${ext}`;
+
+  if (normalizedExt === ".pdf") {
+    await ingestReferencePdf(filePath, workId);
+    return;
+  }
+
+  const textExts = new Set([
+    ".csv",
+    ".tsv",
+    ".txt",
+    ".json",
+    ".md",
+  ]);
+  if (textExts.has(normalizedExt)) {
+    const excerpt = readTextExcerpt(filePath);
+    const name = filePath.split(/[/\\]/).pop() ?? "data";
+    if (excerpt.trim()) {
+      await storeMemory({
+        content: `Uploaded data file (${name}):\n${excerpt}`,
+        containerTag: workTag(workId),
+        metadata: { type: "data_file", filename: name },
+      });
+    }
+    return;
+  }
+
+  // Images and spreadsheets: path stored on disk only; no Supermemory file ingest
+}

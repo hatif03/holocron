@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TypedFieldLabel } from "./TypedFieldLabel";
 import { FileDropzone } from "./FileDropzone";
 import { FigurePreview } from "./FigurePreview";
+import { DataFilePreview } from "./DataFilePreview";
 import { Calendar } from "lucide-react";
 
 interface NodeFieldRendererProps {
@@ -74,7 +75,10 @@ function FieldInput({
           className={compact ? "text-[11px] h-8" : "text-xs h-9"}
         />
       );
-    case "file":
+    case "file": {
+      const isDataField =
+        field.key === "file_path" || field.key === "data_path";
+      const isFigureField = field.key === "figure_path";
       return (
         <div className="space-y-1">
           <FileDropzone
@@ -83,22 +87,32 @@ function FieldInput({
             fileUrl={dataUrlFrom(data, field.key)}
             accept={field.accept}
             placeholder={field.placeholder}
+            nodeType={nodeType}
+            fieldKey={field.key}
             onChange={(path, url) => {
               onChange(field.key, path);
               if (url) onChange(`${field.key}_url`, url);
             }}
             compact={compact}
           />
-          {showFigurePreview &&
-            (field.key === "figure_path" || nodeType === "figure" || nodeType === "table") && (
-              <FigurePreview
-                path={strVal}
-                url={dataUrlFrom(data, field.key)}
-                large={showFigurePreview}
-              />
-            )}
+          {showFigurePreview && isFigureField && (
+            <FigurePreview
+              path={strVal}
+              url={dataUrlFrom(data, field.key)}
+              caption={String(data.caption ?? "")}
+              large={showFigurePreview}
+            />
+          )}
+          {showFigurePreview && isDataField && (
+            <DataFilePreview
+              path={strVal}
+              url={dataUrlFrom(data, field.key)}
+              large={showFigurePreview}
+            />
+          )}
         </div>
       );
+    }
     default:
       return (
         <Input

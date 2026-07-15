@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import type { NodeType } from "@holocron/shared";
 import { getDb } from "@/lib/db";
-import { ingestReferencePdf } from "@/lib/supermemory-client";
+import { ingestWorkFile } from "@/lib/supermemory-client";
+import { validateUploadExtension } from "@/lib/upload-validation";
 
 function sanitizeFilename(raw: string): string {
   const safeName = path.basename(raw);
@@ -28,9 +30,19 @@ export async function POST(
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    const nodeType = String(form.get("nodeType") || "") as NodeType;
+    const fieldKey = String(form.get("fieldKey") || "");
+
     const safeName = sanitizeFilename(file.name);
     if (!safeName) {
       return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
+    }
+
+    if (nodeType && fieldKey) {
+      const validationError = validateUploadExtension(safeName, nodeType, fieldKey);
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
     }
 
     const storagePath = process.env.STORAGE_PATH || "./storage";
@@ -45,8 +57,8 @@ export async function POST(
     const buffer = Buffer.from(await file.arrayBuffer());
     fs.writeFileSync(dest, buffer);
 
-    // Supermemory: file ingestion — work-scoped PDF search (docs/SUPERMEMORY.md)
-    await ingestReferencePdf(dest, workId);
+    const ext = path.extname(safeName).toLowerCase();
+    await ingestWorkFile(dest, workId, ext);
 
     const relPath = `works/${workId}/${safeName}`;
     const url = `/api/works/files?path=${encodeURIComponent(relPath)}`;

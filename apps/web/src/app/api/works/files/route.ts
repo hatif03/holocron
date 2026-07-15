@@ -12,8 +12,12 @@ const MIME: Record<string, string> = {
   ".gif": "image/gif",
   ".webp": "image/webp",
   ".csv": "text/csv",
+  ".tsv": "text/tab-separated-values",
   ".json": "application/json",
   ".txt": "text/plain",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".xls": "application/vnd.ms-excel",
+  ".parquet": "application/octet-stream",
 };
 
 export async function GET(req: NextRequest) {

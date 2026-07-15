@@ -15,6 +15,8 @@ import type { Node, Edge } from "@xyflow/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useCanvasStore } from "@/lib/canvas-store";
 import { MemoryPanel } from "./MemoryPanel";
+import { DiscoverPanel } from "./DiscoverPanel";
+import { AskPanel } from "./AskPanel";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -42,7 +44,7 @@ export function GraphSidebar({
   selectedNodeId,
   onSelectNode,
 }: SidebarProps) {
-  const tabs = ["Nodes", "References", "Memory", "Work Info"];
+  const tabs = ["Nodes", "Refs", "Discover", "Ask", "Memory", "Info"];
   const lastSavedAt = useCanvasStore((s) => s.lastSavedAt);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -84,12 +86,12 @@ export function GraphSidebar({
 
   return (
     <aside className="w-[264px] border-r border-border bg-card flex flex-col shrink-0">
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
-            className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+            className={`shrink-0 px-2 py-2.5 text-[10px] font-medium transition-colors ${
               activeTab === tab
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted-foreground hover:text-foreground"
@@ -170,7 +172,7 @@ export function GraphSidebar({
           </>
         )}
 
-        {activeTab === "References" && (
+        {activeTab === "Refs" && (
           <div className="space-y-3">
             {linkedLibraryRefs.length > 0 && (
               <div>
@@ -220,9 +222,15 @@ export function GraphSidebar({
           </div>
         )}
 
-        {activeTab === "Memory" && <MemoryPanel workId={workId} />}
+        {activeTab === "Discover" && <DiscoverPanel workId={workId} />}
 
-        {activeTab === "Work Info" && (
+        {activeTab === "Ask" && <AskPanel workId={workId} />}
+
+        {activeTab === "Memory" && (
+          <MemoryPanel workId={workId} refreshKey={lastSavedAt ?? ""} />
+        )}
+
+        {activeTab === "Info" && (
           <div className="space-y-3 text-sm">
             <div>
               <div className="text-xs text-muted-foreground">Title</div>

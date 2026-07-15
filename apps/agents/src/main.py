@@ -47,6 +47,13 @@ class LlmConfigUpdate(BaseModel):
     keys: Optional[dict[str, str]] = None
 
 
+class ChatCompleteRequest(BaseModel):
+    system: str
+    user: str
+    temperature: float = 0.5
+    max_tokens: int = 2048
+
+
 @app.on_event("startup")
 async def startup():
     await configure_settings_once()
@@ -139,6 +146,17 @@ async def vlm_suggest_fixes(req: VlmFixRequest):
 @app.post("/agents/citation-verifier/verify")
 async def citation_verifier_verify(req: CitationVerifyRequest):
     return await verify_citations(req)
+
+
+@app.post("/agents/chat/complete")
+async def chat_complete(req: ChatCompleteRequest):
+    content = await llm.complete(
+        req.system,
+        req.user,
+        temperature=req.temperature,
+        max_tokens=req.max_tokens,
+    )
+    return {"content": content}
 
 
 @app.post("/agents/commander/generate")

@@ -185,6 +185,20 @@ export async function fetchLlmConfig() {
   return res.json();
 }
 
+export async function completeChat(system: string, user: string): Promise<string> {
+  const res = await fetch(`${getAgentsUrl()}/agents/chat/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system, user }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(detail || `Chat completion failed (${res.status})`);
+  }
+  const json = await res.json();
+  return String(json.content ?? "");
+}
+
 export async function updateLlmConfig(body: {
   provider?: string;
   api_key?: string;

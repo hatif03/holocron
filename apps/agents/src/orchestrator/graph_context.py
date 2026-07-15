@@ -174,12 +174,44 @@ def _text_fields(data: dict[str, Any]) -> list[str]:
         "user_notes", "pseudo_code", "environment", "value", "significance",
         "caption", "outline", "draft_notes", "name", "formula", "columns", "rows",
         "bibtex", "source_note", "related_terms", "unit", "target_value",
-        "script_source", "notes",
+        "script_source", "notes", "file_path", "data_path", "figure_path",
     ):
         val = data.get(key)
         if val and isinstance(val, str):
             parts.append(f"{key}: {val}")
     return parts
+
+
+def parse_tabular_file(file_path: str, storage_path: str) -> dict[str, Any] | None:
+    """Parse CSV/TSV from storage into columns and rows lists."""
+    from pathlib import Path
+
+    if not file_path:
+        return None
+    rel = file_path.replace("\\", "/")
+    src = Path(storage_path) / rel
+    if not src.is_file():
+        return None
+    ext = src.suffix.lower()
+    if ext not in (".csv", ".tsv", ".txt"):
+        return None
+    try:
+        import csv
+
+        delimiter = "\t" if ext == ".tsv" else ","
+        with open(src, newline="", encoding="utf-8", errors="replace") as f:
+            reader = csv.reader(f, delimiter=delimiter)
+            rows_list = list(reader)
+        if not rows_list:
+            return None
+        headers = [c.strip() for c in rows_list[0]]
+        data_rows = rows_list[1:21]
+        return {
+            "columns": ", ".join(headers),
+            "rows": "\n".join(", ".join(c.strip() for c in row) for row in data_rows),
+        }
+    except Exception:
+        return None
 
 
 def _topological_order(nodes: list[dict], edges: list[dict]) -> list[str]:
@@ -336,6 +368,92 @@ def copy_figure_assets(
     return copied
 
 
+def _latex_escape(text: str) -> str:
+    return (
+        text.replace("\\", "\\textbackslash{}")
+        .replace("_", "\\_")
+        .replace("%", "\\%")
+        .replace("&", "\\&")
+        .replace("#", "\\#")
+    )
+
+
+def enrich_tables_from_files(ctx: GraphContext, storage_path: str) -> None:
+    """Fill table columns/rows from data_path when manual rows are empty."""
+    for tbl in ctx.tables:
+        if tbl.get("rows") and tbl.get("columns"):
+            continue
+        data_path = tbl.get("data_path") or ""
+        parsed = parse_tabular_file(data_path, storage_path)
+        if parsed:
+            if not tbl.get("columns"):
+                tbl["columns"] = parsed["columns"]
+            if not tbl.get("rows"):
+                tbl["rows"] = parsed["rows"]
+
+
+def latex_equations_from_graph(ctx: GraphContext) -> str:
+    blocks: list[str] = []
+    for metric in ctx.metrics:
+        formula = str(metric.get("formula") or "").strip()
+        if not formula:
+            continue
+        label = str(metric.get("label") or metric.get("name") or "Metric")
+        safe_formula = formula if "\\" in formula else formula
+        blocks.append(
+            f"\\begin{{equation}}\n"
+            f"{safe_formula}\n"
+            f"\\end{{equation}}"
+        )
+        blocks.append(f"\\textit{{{_latex_escape(label)}}}")
+    return "\n\n".join(blocks)
+
+
+def latex_code_from_graph(ctx: GraphContext) -> str:
+    blocks: list[str] = []
+    for method in ctx.methods:
+        code = str(method.get("pseudo_code") or "").strip()
+        if not code:
+            continue
+        label = str(method.get("label") or "Analysis procedure")
+        blocks.append(f"\\textbf{{{_latex_escape(label)}}}")
+        blocks.append("\\begin{verbatim}")
+        blocks.append(code)
+        blocks.append("\\end{verbatim}")
+    for fig in ctx.figures:
+        script = str(fig.get("script_source") or "").strip()
+        if not script:
+            continue
+        caption = str(fig.get("caption") or fig.get("label") or "Figure script")
+        blocks.append(f"\\textbf{{{_latex_escape(caption)}}}")
+        blocks.append("\\begin{verbatim}")
+        blocks.append(script)
+        blocks.append("\\end{verbatim}")
+    return "\n\n".join(blocks)
+
+
+def build_section_latex_blocks(
+    ctx: GraphContext,
+    copied_figures: list[str],
+    generated_figures: list[dict[str, str]],
+    storage_path: str,
+) -> dict[str, str]:
+    enrich_tables_from_files(ctx, storage_path)
+    results_parts: list[str] = []
+    results_parts.append(
+        latex_figures_and_tables(ctx, copied_figures, generated_figures)
+    )
+    eq = latex_equations_from_graph(ctx)
+    if eq:
+        results_parts.append(eq)
+
+    methods_code = latex_code_from_graph(ctx)
+    return {
+        "methods": methods_code,
+        "results": "\n\n".join(p for p in results_parts if p.strip()),
+    }
+
+
 def latex_table_from_graph(table_node: dict[str, Any]) -> str:
     """Build a LaTeX table block from a graph table node."""
     caption = str(table_node.get("caption") or table_node.get("label") or "Results")
@@ -364,15 +482,40 @@ def latex_table_from_graph(table_node: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def latex_figures_and_tables(ctx: GraphContext, copied_figures: list[str]) -> str:
+def _figure_caption_for_path(ctx: GraphContext, fig_path: str) -> str:
+    name = fig_path.split("/")[-1]
+    for fig in ctx.figures:
+        uploaded = str(fig.get("figure_path") or "")
+        if uploaded and name in uploaded.replace("\\", "/"):
+            cap = str(fig.get("caption") or fig.get("label") or "")
+            if cap:
+                return _latex_escape(cap)
+    return _latex_escape(f"Figure: {name}")
+
+
+def latex_figures_and_tables(
+    ctx: GraphContext,
+    copied_figures: list[str],
+    generated_figures: list[dict[str, str]] | None = None,
+) -> str:
     """Pre-built LaTeX blocks for Results section."""
     blocks: list[str] = []
     for fig_path in copied_figures:
-        name = fig_path.split("/")[-1]
+        caption = _figure_caption_for_path(ctx, fig_path)
         blocks.append(
             f"\\begin{{figure}}[h]\n\\centering\n"
             f"\\includegraphics[width=\\linewidth]{{{fig_path}}}\n"
-            f"\\caption{{Figure from research graph: {name}}}\n\\end{{figure}}"
+            f"\\caption{{{caption}}}\n\\end{{figure}}"
+        )
+    for gen in generated_figures or []:
+        path = gen.get("path") or ""
+        if not path:
+            continue
+        caption = _latex_escape(gen.get("caption") or "Generated chart")
+        blocks.append(
+            f"\\begin{{figure}}[h]\n\\centering\n"
+            f"\\includegraphics[width=\\linewidth]{{{path}}}\n"
+            f"\\caption{{{caption}}}\n\\end{{figure}}"
         )
     for tbl in ctx.tables:
         blocks.append(latex_table_from_graph(tbl))

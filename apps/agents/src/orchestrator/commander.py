@@ -14,10 +14,11 @@ from ..agents.writer import DraftRequest, draft_section
 from ..config import settings
 from ..orchestrator.graph_context import (
     build_bibtex_entries,
+    build_section_latex_blocks,
     copy_figure_assets,
     extract_graph_context,
-    latex_figures_and_tables,
 )
+from ..orchestrator.chart_generator import generate_charts_from_graph
 from ..orchestrator.graph_contract import GraphContract
 from ..supermemory_client import context_for_work, search_work, store_memory
 
@@ -82,6 +83,7 @@ def _build_main_tex(title: str, venue_style: str, sections: list[str]) -> str:
             "\\usepackage{graphicx}",
             "\\usepackage{amsmath}",
             "\\usepackage{hyperref}",
+            "\\usepackage{listings}",
             f"\\title{{{safe_title}}}",
             "\\author{\\IEEEauthorblockN{Holocron Generated}}",
             "\\begin{document}",
@@ -94,6 +96,7 @@ def _build_main_tex(title: str, venue_style: str, sections: list[str]) -> str:
             "\\usepackage{graphicx}",
             "\\usepackage{amsmath}",
             "\\usepackage{hyperref}",
+            "\\usepackage{listings}",
             "\\usepackage{booktabs}",
             f"\\title{{{safe_title}}}",
             "\\author{Holocron Generated}",
@@ -107,6 +110,7 @@ def _build_main_tex(title: str, venue_style: str, sections: list[str]) -> str:
             "\\usepackage{graphicx}",
             "\\usepackage{amsmath}",
             "\\usepackage{hyperref}",
+            "\\usepackage{listings}",
             "\\usepackage{booktabs}",
             "\\usepackage{natbib}",
             f"\\title{{{safe_title}}}",
@@ -188,7 +192,7 @@ async def _write_section(
     enable_review: bool,
     max_reviews: int,
     sections_dir: Path,
-    latex_blocks: str,
+    latex_blocks_by_section: dict[str, str],
 ) -> tuple[str, int]:
     name = section.get("name", "Section")
     safe_name = name.replace(" ", "_")
@@ -206,7 +210,7 @@ async def _write_section(
 
     section_flow = graph_ctx.section_flow(name, node_ids) or graph_ctx.flow_summary()
     section_figures = copied_figures if name.lower() in ("results", "discussion") else []
-    section_latex = latex_blocks if name.lower() == "results" else ""
+    section_latex = latex_blocks_by_section.get(name.lower(), "")
     min_words = _min_section_words(target_words)
     bib_keys = contract.bib_keys_for_section(name) or contract.required_cite_keys()
 
@@ -348,7 +352,13 @@ async def run_generation(
     sections_dir.mkdir(exist_ok=True)
 
     copied_figures = copy_figure_assets(req.graph, str(output_dir), settings.storage_path)
-    latex_blocks = latex_figures_and_tables(graph_ctx, copied_figures)
+    generated_figures = generate_charts_from_graph(
+        req.graph, str(output_dir), settings.storage_path
+    )
+    latex_blocks_by_section = build_section_latex_blocks(
+        graph_ctx, copied_figures, generated_figures, settings.storage_path
+    )
+    all_figure_paths = copied_figures + [g["path"] for g in generated_figures]
 
     total_words = 0
     discovered_refs: list[dict[str, Any]] = []
@@ -453,14 +463,14 @@ async def run_generation(
         paper_title=paper_title,
         memory_ctx=memory_ctx,
         discovered_refs=discovered_refs,
-        copied_figures=copied_figures,
+        copied_figures=all_figure_paths,
         style=style,
         target_pages=target_pages,
         total_sections=len(sections),
         enable_review=enable_review,
         max_reviews=max_reviews,
         sections_dir=sections_dir,
-        latex_blocks=latex_blocks,
+        latex_blocks_by_section=latex_blocks_by_section,
     )
 
     for section in sections:

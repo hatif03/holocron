@@ -54,8 +54,14 @@ async def _generate_draft(
             )
         elif section_lower == "results":
             cite_hint = (
-                f" Include all figure/table LaTeX blocks provided. "
+                " Include all figure/table/equation LaTeX blocks provided verbatim — "
+                "do not paraphrase or omit them. "
                 f"Cite supporting refs: {', '.join(req.bib_keys[:6])}."
+            )
+        elif section_lower == "methods":
+            cite_hint = (
+                " Include all code/verbatim LaTeX blocks provided verbatim in the Methods section. "
+                f"Cite methods literature: {', '.join(req.bib_keys[:6])}."
             )
         else:
             cite_hint = (
@@ -87,7 +93,10 @@ async def _generate_draft(
     if req.graph_snippets:
         user_parts.append("Graph context:\n" + "\n".join(req.graph_snippets[:25]))
     if req.latex_blocks:
-        user_parts.append("Include these LaTeX blocks in the section:\n" + req.latex_blocks)
+        user_parts.append(
+            "Include these LaTeX blocks verbatim in the section (do not modify or omit):\n"
+            + req.latex_blocks
+        )
     if req.figures:
         user_parts.append("Figures to include:\n" + "\n".join(req.figures))
     user_parts.append(f"Full context:\n{json.dumps(req.context, indent=2)}")

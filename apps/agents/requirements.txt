@@ -13,3 +13,6 @@ sqlalchemy>=2.0.41
 aiofiles>=24.1.0
 supermemory>=3.50.0
 scholarly>=1.7.11
+pandas>=2.2.0
+matplotlib>=3.9.0
+openpyxl>=3.1.0

@@ -1,6 +1,6 @@
 {
   "name": "holocron-research",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Holocron CLI — start the local AI research platform with one command",
   "license": "MIT",
   "author": "Holocron Contributors",

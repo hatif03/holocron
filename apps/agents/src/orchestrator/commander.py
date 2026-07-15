@@ -255,9 +255,17 @@ async def _write_section(
     word_count = draft.word_count
 
     if enable_review:
+        review_query = f"review feedback {name} {paper_title}"
         review_memory = await search_work(
-            req.work_id, f"review feedback {name} {paper_title}", limit=3
+            req.work_id, review_query, limit=3
         )
+        if review_memory:
+            await _emit_memory(
+                on_event, req.work_id, "search",
+                f"Recalled {len(review_memory)} review memories for {name}",
+                section=name, query=review_query,
+                preview=review_memory[0][:300] if review_memory else "",
+            )
         for i in range(max_reviews):
             await _emit(
                 on_event, "Reviewer", "reviewing",
@@ -603,6 +611,12 @@ async def run_generation(
                 custom_id=f"gen_{gen_id}_vlm",
                 metadata={"type": "vlm_review", "generationId": gen_id, "workId": req.work_id},
             )
+            await _emit_memory(
+                on_event, req.work_id, "store",
+                f"Stored VLM review in memory ({'passed' if vlm.passed else 'issues'})",
+                section="review",
+                preview=json.dumps(vlm.issues[:2]) if vlm.issues else "passed",
+            )
             await _emit(
                 on_event, "VLMReview", "completed" if vlm.passed else "feedback",
                 f"VLM review: {'passed' if vlm.passed else 'issues found'}",
@@ -610,6 +624,18 @@ async def run_generation(
             )
 
     final_validation = contract.validate()
+    await store_memory(
+        f"Generation {gen_id} complete: {total_words} words, title: {paper_title}",
+        req.work_id,
+        custom_id=f"gen_{gen_id}_complete",
+        metadata={"type": "generation_complete", "generationId": gen_id, "workId": req.work_id},
+    )
+    await _emit_memory(
+        on_event, req.work_id, "store",
+        f"Stored generation summary ({total_words} words)",
+        section="complete",
+        preview=f"{final_validation['satisfied']}/{final_validation['total']} graph nodes satisfied",
+    )
     await _emit(
         on_event, "Commander", "completed",
         f"Paper generation complete ({total_words} words, {final_validation['satisfied']}/{final_validation['total']} graph nodes)",

@@ -22,6 +22,11 @@ const TYPE_COLORS: Record<string, string> = {
   reference: "bg-purple-100 text-purple-800",
   vlm_review: "bg-gray-100 text-gray-800",
   preference: "bg-violet-100 text-violet-800",
+  data_file: "bg-cyan-100 text-cyan-800",
+  discovered_paper: "bg-indigo-100 text-indigo-800",
+  discover: "bg-indigo-100 text-indigo-800",
+  ask: "bg-pink-100 text-pink-800",
+  generation_complete: "bg-slate-100 text-slate-800",
 };
 
 function MemoryCard({ hit, compact }: { hit: MemoryHit; compact?: boolean }) {
@@ -73,7 +78,7 @@ export function MemoryView({
   if (!enabled) {
     return (
       <p className="text-xs text-muted-foreground italic py-2">
-        Supermemory disabled — set SUPERMEMORY_API_KEY in .env
+        Memory disabled — set SUPERMEMORY_API_KEY in .env
       </p>
     );
   }

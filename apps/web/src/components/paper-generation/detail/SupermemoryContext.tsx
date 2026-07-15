@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Brain, ChevronDown, ChevronRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { workTag } from "@holocron/shared";
 import { MemoryView } from "@/components/memory/MemoryView";
 import type { MemoryHit, MemoryProfile } from "@/lib/memory-types";
@@ -22,7 +21,7 @@ export function SupermemoryContext({
   isRunning = false,
   phaseQuery,
 }: SupermemoryContextProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<MemoryProfile>({ static: [], dynamic: [] });
   const [hits, setHits] = useState<MemoryHit[]>([]);
   const [enabled, setEnabled] = useState(true);
@@ -66,17 +65,17 @@ export function SupermemoryContext({
   }, [load, isRunning]);
 
   return (
-    <Card className="p-4 mb-4">
+    <div className="mb-4 rounded-lg border border-border bg-muted/20">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full text-left"
+        className="flex items-center gap-2 w-full text-left px-3 py-2"
       >
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        <Brain className="h-4 w-4 text-violet-600" />
-        <span className="font-medium text-sm">Supermemory Context</span>
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <Brain className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Memory trace</span>
         {isRunning && (
-          <span className="text-[10px] text-violet-600 ml-1 animate-pulse">live</span>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
         )}
         {workId && (
           <span className="text-[10px] text-muted-foreground ml-auto font-mono">
@@ -85,7 +84,7 @@ export function SupermemoryContext({
         )}
       </button>
       {open && (
-        <div className="mt-3">
+        <div className="px-3 pb-3 border-t border-border/50">
           <MemoryView
             workId={workId}
             profile={profile}
@@ -97,6 +96,6 @@ export function SupermemoryContext({
           />
         </div>
       )}
-    </Card>
+    </div>
   );
 }

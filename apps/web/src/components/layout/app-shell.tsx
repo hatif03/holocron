@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -119,6 +119,54 @@ function OnboardingGate() {
   );
 }
 
+function MemoryHealthDot() {
+  const [status, setStatus] = useState<"ok" | "warn" | "off">("off");
+
+  useEffect(() => {
+    fetch("/api/setup/status")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.supermemoryKeyConfigured) setStatus("off");
+        else if (d.supermemory && d.supermemoryIntegration === "ok") setStatus("ok");
+        else if (d.supermemory) setStatus("warn");
+        else setStatus("off");
+      })
+      .catch(() => setStatus("off"));
+    const interval = setInterval(() => {
+      fetch("/api/setup/status")
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d.supermemory) setStatus("off");
+          else if (d.supermemory === "ok" || d.supermemoryIntegration === "ok")
+            setStatus("ok");
+          else setStatus("warn");
+        })
+        .catch(() => setStatus("off"));
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const color =
+    status === "ok"
+      ? "bg-emerald-500"
+      : status === "warn"
+        ? "bg-amber-500"
+        : "bg-muted-foreground/40";
+
+  return (
+    <span
+      className={`h-1.5 w-1.5 rounded-full shrink-0 ${color}`}
+      title={
+        status === "ok"
+          ? "Memory service connected"
+          : status === "warn"
+            ? "Memory service degraded"
+            : "Memory service unavailable"
+      }
+    />
+  );
+}
+
 function ShellHeader() {
   const pathname = usePathname();
   const base =
@@ -131,6 +179,7 @@ function ShellHeader() {
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-1 h-4" />
       <span className="text-sm font-medium">{title}</span>
+      <MemoryHealthDot />
     </header>
   );
 }

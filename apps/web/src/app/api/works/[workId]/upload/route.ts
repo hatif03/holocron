@@ -4,6 +4,7 @@ import path from "path";
 import type { NodeType } from "@holocron/shared";
 import { getDb } from "@/lib/db";
 import { ingestWorkFile } from "@/lib/supermemory-client";
+import { buildWriteTrace } from "@/lib/memory-trace";
 import { validateUploadExtension } from "@/lib/upload-validation";
 
 function sanitizeFilename(raw: string): string {
@@ -63,7 +64,9 @@ export async function POST(
     const relPath = `works/${workId}/${safeName}`;
     const url = `/api/works/files?path=${encodeURIComponent(relPath)}`;
 
-    return NextResponse.json({ path: relPath, url });
+    const memoryTrace = buildWriteTrace(workId, "data_file", { count: 1 });
+
+    return NextResponse.json({ path: relPath, url, memoryTrace });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

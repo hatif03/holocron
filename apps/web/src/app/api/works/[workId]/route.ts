@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { storeMemory, summarizeGraph } from "@/lib/supermemory-client";
+import { buildWriteTrace } from "@/lib/memory-trace";
 import { workTag } from "@holocron/shared";
 
 export async function GET(
@@ -107,6 +108,11 @@ export async function PUT(
         customId: `work_${workId}_graph`,
         metadata: { type: "graph", workId },
       });
+
+      const memoryTrace = buildWriteTrace(workId, "graph", {
+        customId: `work_${workId}_graph`,
+      });
+      return NextResponse.json({ ok: true, memoryTrace });
     }
 
     return NextResponse.json({ ok: true });

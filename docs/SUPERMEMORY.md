@@ -78,6 +78,29 @@ Metadata on writes: `{ type, generationId, workId, section?, referenceId? }`.
 
 ### Web UI (MemoryView)
 
+- Research graph sidebar **Memory** tab — search/profile for `work_{id}`
+- **Discover** tab — ranked literature discovery with Supermemory persistence
+- **Ask** tab — memory-grounded Q&A with per-response recall chips
+- Paper generation **Memory trace** panel (collapsed by default)
+- `MemoryActivityStrip` — expandable client-side activity timeline
+- App shell memory health dot (green/amber/gray)
+
+See [CITE_SMART_BORROW.md](./CITE_SMART_BORROW.md) for discovery and ask chat details.
+
+### memoryTrace responses
+
+Write APIs return a `memoryTrace` object where applicable:
+
+| Route | `memoryTrace.source` |
+|-------|---------------------|
+| `PUT /api/works/[workId]` (graph save) | `graph` |
+| `POST /api/works/[workId]/upload` | `data_file` |
+| `POST /api/references/analyze` | `reference` |
+| `POST /api/works/[workId]/discover` | `discover` |
+| `POST /api/works/[workId]/ask` | `ask` (read + write) |
+
+Client code calls `pushMemoryTrace()` to populate the activity strip without polling.
+
 Shared component: `apps/web/src/components/memory/MemoryView.tsx`
 
 | Surface | API | Features |
@@ -86,7 +109,7 @@ Shared component: `apps/web/src/components/memory/MemoryView.tsx`
 | Research graph sidebar | `GET /api/works/[workId]/memory/search` | Hybrid search |
 | Profile block | `GET /api/works/[workId]/memory/profile` | Static + dynamic profile + hits |
 
-`searchMemoriesRich` returns `{ text, score, customId, metadata, type }` for expandable cards with type badges (`planner`, `writer`, `graph`, `reference`).
+`searchMemoriesRich` returns `{ text, score, customId, metadata, type }` for expandable cards with type badges (`planner`, `writer`, `graph`, `reference`, `discovered_paper`, `ask`, `data_file`).
 
 ### Reference library
 

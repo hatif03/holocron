@@ -39,6 +39,7 @@ import {
   registerUpdateNodeData,
 } from "@/lib/canvas-store";
 import { spreadNodes, nodesOverlap } from "@/lib/graph-layout";
+import { pushMemoryTrace } from "@/lib/memory-trace";
 
 interface CanvasEditorProps {
   workId: string;
@@ -207,7 +208,7 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
         target: e.target,
       })),
     };
-    await fetch(`/api/works/${workId}`, {
+    const res = await fetch(`/api/works/${workId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -216,6 +217,8 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
         graph,
       }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (data.memoryTrace) pushMemoryTrace(data.memoryTrace);
     setLastSavedAt(new Date().toISOString());
     setSaving(false);
   };

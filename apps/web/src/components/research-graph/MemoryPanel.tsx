@@ -7,19 +7,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { workTag } from "@holocron/shared";
 import { MemoryView } from "@/components/memory/MemoryView";
+import { MemoryActivityStrip } from "@/components/memory/MemoryActivityStrip";
+import { buildReadTrace, pushMemoryTrace } from "@/lib/memory-trace";
 import type { MemoryHit, MemoryProfile } from "@/lib/memory-types";
 
 interface MemoryPanelProps {
   workId: string;
+  refreshKey?: string | number;
 }
 
-export function MemoryPanel({ workId }: MemoryPanelProps) {
+export function MemoryPanel({ workId, refreshKey = 0 }: MemoryPanelProps) {
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<MemoryHit[]>([]);
   const [profile, setProfile] = useState<MemoryProfile>({ static: [], dynamic: [] });
   const [loading, setLoading] = useState(false);
   const [smStatus, setSmStatus] = useState<string>("checking");
   const [enabled, setEnabled] = useState(true);
+  const [showActivity, setShowActivity] = useState(false);
+
+  const loadProfile = useCallback(async () => {
+    const res = await fetch(`/api/works/${workId}/memory/profile`);
+    const d = await res.json();
+    if (d.profile) setProfile(d.profile);
+    if (d.hits) setHits(d.hits);
+    setEnabled(d.enabled !== false);
+  }, [workId]);
 
   useEffect(() => {
     fetch("/api/agents/health")
@@ -27,15 +39,8 @@ export function MemoryPanel({ workId }: MemoryPanelProps) {
       .then((h) => setSmStatus(h.supermemory || "unknown"))
       .catch(() => setSmStatus("unreachable"));
 
-    fetch(`/api/works/${workId}/memory/profile`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.profile) setProfile(d.profile);
-        if (d.hits) setHits(d.hits);
-        setEnabled(d.enabled !== false);
-      })
-      .catch(() => {});
-  }, [workId]);
+    loadProfile().catch(() => {});
+  }, [workId, refreshKey, loadProfile]);
 
   const search = useCallback(async () => {
     if (!query.trim()) return;
@@ -46,13 +51,19 @@ export function MemoryPanel({ workId }: MemoryPanelProps) {
     ]);
     const searchData = await searchRes.json();
     const profileData = await profileRes.json();
-    setHits(
+    const merged =
       profileData.hits?.length
         ? profileData.hits
-        : (searchData.results || []).map((text: string) => ({ text }))
-    );
+        : (searchData.results || []).map((text: string) => ({ text }));
+    setHits(merged);
     if (profileData.profile) setProfile(profileData.profile);
     setEnabled(profileData.enabled !== false);
+    pushMemoryTrace(
+      buildReadTrace(workId, "memory_panel", {
+        query,
+        count: merged.length,
+      })
+    );
     setLoading(false);
   }, [workId, query]);
 
@@ -63,7 +74,7 @@ export function MemoryPanel({ workId }: MemoryPanelProps) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Brain className="h-3.5 w-3.5" />
-          <span title="Powered by Supermemory — see docs/SUPERMEMORY.md">Supermemory</span>
+          <span>Memory</span>
         </div>
         <Badge variant={statusVariant} className="text-[10px]">
           {smStatus}
@@ -71,8 +82,8 @@ export function MemoryPanel({ workId }: MemoryPanelProps) {
       </div>
 
       <p className="text-[11px] text-muted-foreground leading-relaxed">
-        Memories stored when you save the graph, upload PDFs, analyze references,
-        or run paper generation. Scoped to{" "}
+        Context from graph saves, uploads, discovery, and paper generation. Scoped
+        to{" "}
         <code className="text-[10px] bg-muted px-1 rounded">{workTag(workId)}</code>.
       </p>
 
@@ -103,6 +114,15 @@ export function MemoryPanel({ workId }: MemoryPanelProps) {
         enabled={enabled}
         emptyMessage={query ? "No memories found." : "Search to recall stored context."}
       />
+
+      <button
+        type="button"
+        onClick={() => setShowActivity(!showActivity)}
+        className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+      >
+        {showActivity ? "Hide activity" : "View activity"}
+      </button>
+      {showActivity && <MemoryActivityStrip defaultOpen />}
     </div>
   );
 }

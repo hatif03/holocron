@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzePaper } from "@/lib/agents-client";
 import { getDb } from "@/lib/db";
 import { storeMemory, summarizeReferenceAnalysis } from "@/lib/supermemory-client";
+import { buildWriteTrace } from "@/lib/memory-trace";
 import { LOCAL_USER_ID, workTag } from "@holocron/shared";
 
 export async function POST(req: NextRequest) {
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
       `;
     }
 
+    let memoryTrace;
     if (work_id) {
       await storeMemory({
         content: summarizeReferenceAnalysis(analysis as Record<string, unknown>),
@@ -28,9 +30,12 @@ export async function POST(req: NextRequest) {
           ...(reference_id ? { referenceId: reference_id } : {}),
         },
       });
+      memoryTrace = buildWriteTrace(work_id, "reference", {
+        customId: reference_id ? `ref_${reference_id}` : undefined,
+      });
     }
 
-    return NextResponse.json(analysis);
+    return NextResponse.json({ ...analysis, memoryTrace });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

@@ -17,19 +17,22 @@ export async function stopCommand() {
     return;
   }
 
-  let composeFile = getComposePath();
-  if (!fs.existsSync(composeFile)) {
-    composeFile = path.join(getRepoRoot(), "docker", "docker-compose.yml");
-  }
+  const releaseCompose = getComposePath();
+  const devCompose = path.join(getRepoRoot(), "docker", "docker-compose.yml");
+  const envPath = getEnvPath();
+  const dataDir = getDataDir();
+  const imageTag = getPackageVersion();
+  const migrationsDir = getMigrationsDir();
 
   console.log(chalk.bold("\nStopping Holocron...\n"));
-  runDockerCompose(
-    composeFile,
-    ["down"],
-    getEnvPath(),
-    getDataDir(),
-    getPackageVersion(),
-    getMigrationsDir()
-  );
+
+  if (fs.existsSync(releaseCompose)) {
+    runDockerCompose(releaseCompose, ["down"], envPath, dataDir, imageTag, migrationsDir);
+  }
+
+  if (fs.existsSync(devCompose)) {
+    runDockerCompose(devCompose, ["down"], envPath, dataDir, imageTag, migrationsDir);
+  }
+
   console.log(chalk.green("Services stopped.\n"));
 }

@@ -7,6 +7,7 @@ import { execSync, spawnSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { bootstrapSupermemory, ensureSupermemoryHealthy } from "./supermemory-bootstrap.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -70,6 +71,14 @@ function openBrowser(url) {
   }
 }
 
+function printFailureHints() {
+  console.error("\nStartup failed. Useful diagnostics:");
+  console.error("  docker compose -f docker/docker-compose.yml ps");
+  console.error("  docker logs docker-web-1 --tail 30");
+  console.error("  docker logs docker-agents-1 --tail 30");
+  console.error("  docker logs docker-supermemory-1 --tail 30");
+}
+
 async function main() {
   console.log("\nHolocron local start\n");
 
@@ -82,14 +91,46 @@ async function main() {
 
   run("node", ["scripts/storage-init.mjs"]);
 
+  console.log("Stopping any existing dev stack...");
+  spawnSync("docker", ["compose", "-f", composeFile, "down"], {
+    stdio: "inherit",
+    cwd: repoRoot,
+    shell: process.platform === "win32",
+  });
+
+  console.log("\nStarting Supermemory first...");
+  const smOk = await ensureSupermemoryHealthy(composeFile, { build: true });
+  if (!smOk) {
+    console.error("Supermemory failed to become healthy. Check: docker logs docker-supermemory-1 --tail 30");
+    printFailureHints();
+    process.exit(1);
+  }
+
   run("docker", ["compose", "-f", composeFile, "up", "-d", "--build"]);
 
-  console.log("\nWaiting for services...");
-  const ok =
-    (await waitForUrl("http://localhost:3000/health", "Web")) &&
-    (await waitForUrl("http://localhost:8000/health", "Agents"));
+  console.log("\nBootstrapping Supermemory...");
+  await bootstrapSupermemory({
+    envPath: envFile,
+    composeFile,
+    restartServices: ["agents", "web"],
+  });
 
-  if (!ok) process.exit(1);
+  console.log("\nWaiting for services...");
+  const webOk = await waitForUrl("http://localhost:3000/health", "Web");
+  const agentsOk = await waitForUrl("http://localhost:8000/health", "Agents");
+
+  if (!webOk || !agentsOk) {
+    printFailureHints();
+    process.exit(1);
+  }
+
+  try {
+    const agentsRes = await fetch("http://localhost:8000/health");
+    const agentsData = await agentsRes.json();
+    console.log(`Agents supermemory: ${agentsData.supermemory ?? "unknown"}`);
+  } catch {
+    /* non-fatal */
+  }
 
   if (await dbEmpty()) {
     console.log("\nEmpty database — seeding demo data...");

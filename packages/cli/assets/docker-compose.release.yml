@@ -14,7 +14,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U holocron"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 60s
 
   agents:
     image: ghcr.io/hatif03/holocron-agents:${HOLOCRON_IMAGE_TAG:-1.0.0}
@@ -30,7 +31,7 @@ services:
       postgres:
         condition: service_healthy
       supermemory:
-        condition: service_started
+        condition: service_healthy
 
   latex:
     image: ghcr.io/hatif03/holocron-latex:${HOLOCRON_IMAGE_TAG:-1.0.0}
@@ -44,13 +45,19 @@ services:
     env_file:
       - ${HOLOCRON_ENV_FILE}
     environment:
+      DATABASE_URL: postgresql://holocron:holocron@postgres:5432/holocron
+      AGENTS_SERVICE_URL: http://agents:8000
+      LATEX_SERVICE_URL: http://latex:8080
       SUPERMEMORY_API_URL: http://host.docker.internal:6767
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      - postgres
-      - agents
-      - supermemory
+      postgres:
+        condition: service_healthy
+      agents:
+        condition: service_started
+      supermemory:
+        condition: service_healthy
 
   supermemory:
     image: ghcr.io/hatif03/holocron-supermemory:${HOLOCRON_IMAGE_TAG:-1.0.0}
@@ -65,6 +72,13 @@ services:
       OPENAI_BASE_URL: ${K2THINK_BASE_URL:-https://api.k2think.ai/v1/chat/completions}
       OPENAI_MODEL: ${K2THINK_MODEL:-MBZUAI-IFM/K2-Think-v2}
       SUPERMEMORY_EMBEDDING_RAM_LIMIT: 2gb
+      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     volumes:
       - ${HOLOCRON_DATA}/supermemory:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:6767/v4/openapi >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
     restart: unless-stopped

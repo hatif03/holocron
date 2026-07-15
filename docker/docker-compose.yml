@@ -14,7 +14,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U holocron"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 60s
 
   agents:
     build:
@@ -52,6 +53,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      supermemory:
+        condition: service_healthy
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
   latex:
@@ -67,6 +70,7 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
+      target: dev
     env_file:
       - ../.env
     ports:
@@ -77,6 +81,7 @@ services:
       NEXT_PUBLIC_AGENTS_URL: http://localhost:8000
       STORAGE_PATH: /data/storage
       AUTH_MODE: local
+      LATEX_SERVICE_URL: http://latex:8080
       K2THINK_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
       SUPERMEMORY_API_URL: http://host.docker.internal:6767
     extra_hosts:
@@ -86,8 +91,12 @@ services:
       - ../packages:/app/packages
       - ../storage:/data/storage
     depends_on:
-      - postgres
-      - agents
+      postgres:
+        condition: service_healthy
+      agents:
+        condition: service_started
+      supermemory:
+        condition: service_healthy
     command: npm run dev --workspace=web
 
   supermemory:
@@ -99,11 +108,18 @@ services:
     environment:
       SUPERMEMORY_DATA_DIR: /data
       OPENAI_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
-      OPENAI_BASE_URL: ${K2THINK_BASE_URL:-https://www.k2think.ai/api/chat/completions}
+      OPENAI_BASE_URL: ${K2THINK_BASE_URL:-https://api.k2think.ai/v1/chat/completions}
       OPENAI_MODEL: ${K2THINK_MODEL:-MBZUAI-IFM/K2-Think-v2}
       SUPERMEMORY_EMBEDDING_RAM_LIMIT: 2gb
+      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     volumes:
       - supermemory_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:6767/v4/openapi >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
     restart: unless-stopped
 
 volumes:

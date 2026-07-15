@@ -18,6 +18,15 @@ RUN npm run build --workspace=@holocron/shared
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build --workspace=web
 
+FROM base AS dev
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json turbo.json ./
+COPY packages/shared ./packages/shared
+COPY apps/web ./apps/web
+ENV NEXT_TELEMETRY_DISABLED=1
+EXPOSE 3000
+CMD ["npm", "run", "dev", "--workspace=web"]
+
 FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

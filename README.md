@@ -12,10 +12,10 @@ Marketing site: [holocron.vercel.app](https://holocron.vercel.app) (deploy `apps
 
 ```bash
 # 1. Verify prerequisites (Node 20+, Docker running, ports free)
-npx holocron-research@latest doctor
+npx holocron-research@1.0.3 doctor
 
 # 2. First run — setup wizard + Docker images + browser
-npx holocron-research@latest start
+npx holocron-research@1.0.3 start
 ```
 
 First run:
@@ -55,6 +55,9 @@ holocron start
 | Area | Route | Description |
 |------|-------|-------------|
 | **Research Graph** | `/research-graph` | Visual canvas with 16 node types — ideation, knowledge, execution, evidence |
+| **Discover** | Research graph sidebar | Rank related papers via Semantic Scholar; add to library or literature nodes |
+| **Ask** | Research graph sidebar | Memory-grounded citation Q&A scoped to `work_{id}` |
+| **Memory** | Research graph sidebar | Search and trace Supermemory activity for the current work |
 | **Paper Generation** | `/paper-generation` | Multi-agent pipeline from graph or metadata wizard |
 | **References** | `/references` | Semantic Scholar, arXiv, PDF upload, BibTeX import, AI analysis |
 | **Agents** | `/agents` | Live status for the multi-agent pipeline |
@@ -106,8 +109,10 @@ flowchart LR
   Browser["Browser :3000"] --> Web["Next.js web"]
   Web --> DB["Postgres"]
   Web --> Agents["FastAPI agents :8000"]
+  Web --> SM["Supermemory :6767"]
   Agents --> LLM["LLM provider BYOK"]
   Agents --> Latex["LaTeX service :8081"]
+  Agents --> SM
   Agents --> Storage["Local storage"]
 ```
 
@@ -117,6 +122,7 @@ flowchart LR
 | Agents | 8000 | Python FastAPI multi-agent service |
 | Postgres | 5432 | Research works, references, generations |
 | LaTeX | 8081 | Self-healing PDF compilation |
+| Supermemory | 6767 | Local semantic memory (work-scoped context) |
 
 End-user config lives at `~/.holocron/.env`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for monorepo layout and data flow.
 
@@ -175,7 +181,13 @@ npm run gen:live     # Live paper generation via agents API
 npm run gen:verify   # Verify latest generation artifacts
 npm run gen:cleanup  # Remove failed/stub generations
 npm run gen:backfill-events  # Reconstruct process log from disk
+npm run seed:showcase        # OWID climate-health demo graph
+npm run cleanup:e2e          # Remove E2E test works + verify memory purge
+npm run verify:supermemory   # Supermemory E2E (self-cleaning)
+npm run verify:discover-ask  # Discover + Ask with real OWID data
 ```
+
+See also [docs/CITE_SMART_BORROW.md](docs/CITE_SMART_BORROW.md) for Discover/Ask design notes.
 
 App-specific guides: [apps/web/README.md](apps/web/README.md), [packages/cli/README.md](packages/cli/README.md).
 

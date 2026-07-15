@@ -35,6 +35,12 @@ export const NODE_FIELD_SCHEMAS: Record<NodeType, NodeTypeMeta> = {
         placeholder: "Enter paper title...",
       },
       {
+        key: "keywords",
+        label: "Keywords",
+        type: "text",
+        placeholder: "e.g., climate, mortality, OWID...",
+      },
+      {
         key: "target_venue",
         label: "Target Venue",
         type: "text",

@@ -1,19 +1,34 @@
 {
-  "name": "holocron",
-  "version": "0.1.0",
+  "name": "holocron-research",
+  "version": "1.0.0",
   "description": "Holocron CLI — start the local AI research platform with one command",
+  "license": "MIT",
+  "author": "Holocron Contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hatif03/holocron.git"
+  },
+  "homepage": "https://github.com/hatif03/holocron#readme",
+  "bugs": {
+    "url": "https://github.com/hatif03/holocron/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
-    "holocron": "./dist/index.js"
+    "holocron": "dist/index.js"
   },
   "files": [
     "dist",
     "assets",
-    "README.md"
+    "README.md",
+    "package.json"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format cjs --dts --clean",
     "dev": "tsup src/index.ts --format cjs --watch",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "node ../../scripts/copy-cli-migrations.mjs && npm run build"
   },
   "engines": {
     "node": ">=20"
@@ -23,13 +38,14 @@
     "research",
     "ai-agents",
     "latex",
+    "academic",
     "k2-think",
-    "byok"
+    "byok",
+    "local-first"
   ],
   "dependencies": {
     "chalk": "^5.4.1",
     "commander": "^14.0.0",
-    "dotenv": "^16.5.0",
     "ora": "^8.2.0"
   },
   "devDependencies": {

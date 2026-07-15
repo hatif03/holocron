@@ -1,6 +1,13 @@
 import chalk from "chalk";
 import { checkDocker, runDockerCompose } from "../docker.js";
-import { getComposePath, getEnvPath, getRepoRoot } from "../paths.js";
+import {
+  getComposePath,
+  getEnvPath,
+  getRepoRoot,
+  getDataDir,
+  getPackageVersion,
+  getMigrationsDir,
+} from "../paths.js";
 import path from "path";
 import fs from "fs";
 
@@ -16,6 +23,13 @@ export async function stopCommand() {
   }
 
   console.log(chalk.bold("\nStopping Holocron...\n"));
-  runDockerCompose(composeFile, ["down"], getEnvPath());
+  runDockerCompose(
+    composeFile,
+    ["down"],
+    getEnvPath(),
+    getDataDir(),
+    getPackageVersion(),
+    getMigrationsDir()
+  );
   console.log(chalk.green("Services stopped.\n"));
 }

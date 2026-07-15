@@ -43,7 +43,7 @@ const DEFAULTS: Record<string, { base: string; model: string }> = {
 
 export async function setupCommand() {
   console.log(chalk.bold("\nHolocron Setup\n"));
-  console.log(chalk.dim("Docker Desktop is the only required prerequisite.\n"));
+  console.log(chalk.dim("Prerequisites: Node.js 20+ and Docker Desktop (see `holocron install-guide`).\n"));
 
   getHolocronDir();
   const envPath = getEnvPath();

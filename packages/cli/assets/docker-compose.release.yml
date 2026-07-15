@@ -8,7 +8,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ${HOLOCRON_DATA:-~/.holocron/data}/postgres:/var/lib/postgresql/data
+      - ${HOLOCRON_DATA}/postgres:/var/lib/postgresql/data
+      - ${HOLOCRON_MIGRATIONS_DIR}:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U holocron"]
       interval: 5s
@@ -16,11 +17,11 @@ services:
       retries: 5
 
   agents:
-    image: ghcr.io/hatif03/holocron-agents:0.1.0
+    image: ghcr.io/hatif03/holocron-agents:${HOLOCRON_IMAGE_TAG:-1.0.0}
     ports:
       - "8000:8000"
     env_file:
-      - ${HOLOCRON_ENV_FILE:-~/.holocron/.env}
+      - ${HOLOCRON_ENV_FILE}
     environment:
       SUPERMEMORY_API_URL: http://host.docker.internal:6767
     extra_hosts:
@@ -32,16 +33,16 @@ services:
         condition: service_started
 
   latex:
-    image: ghcr.io/hatif03/holocron-latex:0.1.0
+    image: ghcr.io/hatif03/holocron-latex:${HOLOCRON_IMAGE_TAG:-1.0.0}
     ports:
       - "8081:8080"
 
   web:
-    image: ghcr.io/hatif03/holocron-web:0.1.0
+    image: ghcr.io/hatif03/holocron-web:${HOLOCRON_IMAGE_TAG:-1.0.0}
     ports:
       - "3000:3000"
     env_file:
-      - ${HOLOCRON_ENV_FILE:-~/.holocron/.env}
+      - ${HOLOCRON_ENV_FILE}
     environment:
       SUPERMEMORY_API_URL: http://host.docker.internal:6767
     extra_hosts:
@@ -52,17 +53,18 @@ services:
       - supermemory
 
   supermemory:
+    image: ghcr.io/hatif03/holocron-supermemory:${HOLOCRON_IMAGE_TAG:-1.0.0}
     build: ./supermemory
     ports:
       - "6767:6767"
     env_file:
-      - ${HOLOCRON_ENV_FILE:-~/.holocron/.env}
+      - ${HOLOCRON_ENV_FILE}
     environment:
       SUPERMEMORY_DATA_DIR: /data
       OPENAI_API_KEY: ${K2THINK_API_KEY:-mock-key-for-dev}
-      OPENAI_BASE_URL: ${K2THINK_BASE_URL:-https://www.k2think.ai/api/chat/completions}
+      OPENAI_BASE_URL: ${K2THINK_BASE_URL:-https://api.k2think.ai/v1/chat/completions}
       OPENAI_MODEL: ${K2THINK_MODEL:-MBZUAI-IFM/K2-Think-v2}
       SUPERMEMORY_EMBEDDING_RAM_LIMIT: 2gb
     volumes:
-      - ${HOLOCRON_DATA:-~/.holocron/data}/supermemory:/data
+      - ${HOLOCRON_DATA}/supermemory:/data
     restart: unless-stopped

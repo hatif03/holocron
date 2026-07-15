@@ -1,69 +1,45 @@
-# holocron CLI
+# holocron CLI v1.0.0
 
 npm package published as **`holocron`**. One-command local deployment for the Holocron research platform.
 
-## Install
+## Install (fresh system)
+
+1. Install [Node.js 20 LTS](https://nodejs.org/en/download)
+2. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine on Linux)
+3. Run:
 
 ```bash
-# Run without installing
-npx holocron start
-
-# Or install globally
-npm install -g holocron
+npx holocron-research@latest doctor
+npx holocron-research@latest start
 ```
 
-**Prerequisite:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+For a printable checklist: `holocron install-guide`
+
+Marketing site: [holocron.vercel.app/install](https://holocron.vercel.app/install)
 
 ## Commands
 
-### `holocron start`
+| Command | Description |
+|---------|-------------|
+| `holocron start` | Pull images, start stack, open browser |
+| `holocron setup` | LLM provider wizard → `~/.holocron/.env` |
+| `holocron doctor` | Check Node, Docker, Compose, ports |
+| `holocron install-guide` | Full install steps for Windows / macOS / Linux |
+| `holocron status` | Service health |
+| `holocron stop` | Tear down containers |
 
-Starts the full stack (Postgres, agents, LaTeX, **Supermemory Local**, web). On first run, runs `holocron setup` if `~/.holocron/.env` is missing. Captures the Supermemory `sm_*` API key on first boot. Waits for health endpoints and opens the browser at `http://localhost:3000`.
+First `start` downloads ~2–4 GB of Docker images and runs DB migrations automatically.
 
-### `holocron setup`
+## Release
 
-Interactive wizard:
+Tag `v1.0.0` (or later) triggers [`.github/workflows/release.yml`](../../.github/workflows/release.yml):
 
-1. Choose LLM provider (default: K2 Think)
-2. Enter API key (Enter for mock mode)
-3. Confirm base URL and model
-4. Optional Semantic Scholar key
-
-Writes config to `~/.holocron/.env`.
-
-### `holocron doctor`
-
-Checks Node.js 20+, Docker availability, and ports 3000 / 8000 / 5432 / **6767**.
-
-### `holocron status`
-
-Prints service health summary including Supermemory and API key configuration.
-
-### Supermemory
-
-`holocron start` includes Supermemory Local (`localhost:6767`). Set `K2THINK_API_KEY` in `~/.holocron/.env` for memory extraction. See [docs/SUPERMEMORY.md](../../docs/SUPERMEMORY.md).
-
-### `holocron stop`
-
-Tears down Docker Compose containers.
-
-## Config paths
-
-| Path | Contents |
-|------|----------|
-| `~/.holocron/.env` | Environment variables for Docker |
-| `~/.holocron/data/storage` | User file storage |
-| `~/.holocron/data/postgres` | Postgres data (release stack) |
-
-## Development
-
-From monorepo root:
+- Builds and pushes GHCR images (`holocron-web`, `holocron-agents`, `holocron-latex`, `holocron-supermemory`)
+- Publishes `holocron@<version>` to npm (requires `NPM_TOKEN` secret)
 
 ```bash
-npm run build --workspace=holocron
-node packages/cli/dist/index.js doctor
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-Release workflow publishes to npm and pushes Docker images to GHCR on version tags.
-
-See [../../README.md](../../README.md) and [../../docs/CONFIGURATION.md](../../docs/CONFIGURATION.md) for full documentation.
+See [../../README.md](../../README.md) for full documentation.

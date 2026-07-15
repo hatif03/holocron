@@ -57,6 +57,12 @@ jobs:
           npm pkg set version=$VERSION --workspace=holocron-research
 
       - name: Publish npm package
-        run: npm publish --workspace=holocron-research --access public
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          if npm view "holocron-research@${VERSION}" version >/dev/null 2>&1; then
+            echo "holocron-research@${VERSION} already on npm — skipping publish"
+          else
+            npm publish --workspace=holocron-research --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

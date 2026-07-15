@@ -1,6 +1,6 @@
-# holocron CLI v1.0.0
+# holocron-research CLI v1.0.1
 
-npm package published as **`holocron`**. One-command local deployment for the Holocron research platform.
+npm package published as **`holocron-research`**. One-command local deployment for the Holocron research platform.
 
 ## Install (fresh system)
 
@@ -25,7 +25,8 @@ Marketing site: [holocron.vercel.app/install](https://holocron.vercel.app/instal
 | `holocron setup` | LLM provider wizard → `~/.holocron/.env` |
 | `holocron doctor` | Check Node, Docker, Compose, ports |
 | `holocron install-guide` | Full install steps for Windows / macOS / Linux |
-| `holocron status` | Service health |
+| `holocron status` | Service health (web, agents, DB, LaTeX, Supermemory) |
+| `holocron seed` | Load OWID climate-health showcase graph |
 | `holocron stop` | Tear down containers |
 
 First `start` downloads ~2–4 GB of Docker images and runs DB migrations automatically.

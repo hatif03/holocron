@@ -4,9 +4,9 @@ import { join } from "path";
 import { Command } from "commander";
 import { doctorCommand, installGuideCommand } from "./commands/doctor.js";
 import { setupCommand } from "./commands/setup.js";
-import { startCommand } from "./commands/start.js";
 import { stopCommand } from "./commands/stop.js";
 import { statusCommand } from "./commands/status.js";
+import { seedCommand } from "./commands/seed.js";
 
 function readVersion(): string {
   try {
@@ -43,7 +43,11 @@ program
 program
   .command("start")
   .description("Start full stack (web + agents + DB + LaTeX)")
-  .action(startCommand);
+  .option("--seed", "Load OWID showcase research graph after startup")
+  .action(async (opts: { seed?: boolean }) => {
+    const { startCommand } = await import("./commands/start.js");
+    await startCommand({ seed: !!opts.seed });
+  });
 
 program
   .command("stop")
@@ -54,5 +58,10 @@ program
   .command("status")
   .description("Show service health and agent status")
   .action(statusCommand);
+
+program
+  .command("seed")
+  .description("Load OWID climate-health showcase research graph")
+  .action(seedCommand);
 
 program.parse();

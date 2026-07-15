@@ -38,12 +38,13 @@ Holocron uses [Supermemory Local](https://supermemory.ai/docs/self-hosting/overv
 | `holocron doctor` | Check Node, Docker, Compose, and port availability |
 | `holocron install-guide` | Step-by-step install for fresh systems |
 | `holocron status` | Show service health |
+| `holocron seed` | Load OWID climate-health showcase graph |
 | `holocron stop` | Tear down containers |
 
 Install globally:
 
 ```bash
-npm install -g holocron
+npm install -g holocron-research
 holocron start
 ```
 

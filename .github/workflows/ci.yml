@@ -92,10 +92,14 @@ jobs:
       - name: Pack and smoke-test CLI
         working-directory: packages/cli
         run: |
+          VERSION=$(node -p "require('./package.json').version")
           npm pack
-          npm install -g holocron-research-1.0.0.tgz
+          npm install -g holocron-research-${VERSION}.tgz
           holocron --version
+          holocron doctor
           holocron install-guide | head -5
+          HOLOCRON_DATA=/tmp/holocron-ci HOLOCRON_IMAGE_TAG=$VERSION \
+            docker compose -f assets/docker-compose.release.yml config --quiet
 
   test-marketing:
     runs-on: ubuntu-latest

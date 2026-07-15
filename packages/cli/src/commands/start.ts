@@ -18,13 +18,23 @@ import {
   getPackageVersion,
   getMigrationsDir,
 } from "../paths.js";
-import { setupCommand } from "./setup.js";
-import { envHasSupermemoryKey, waitForSupermemoryKey } from "../supermemory.js";
+import { setupCommand, setupNonInteractive } from "./setup.js";
+import {
+  envHasSupermemoryKey,
+  bootstrapSupermemoryForCli,
+  checkSupermemoryOnline,
+  ensureSupermemoryHealthyForCli,
+} from "../supermemory.js";
 import { assertPrerequisitesOrExit } from "./doctor.js";
+import { seedCommand } from "./seed.js";
 
 const WEB_URL = "http://localhost:3000";
 const AGENTS_HEALTH = "http://localhost:8000/health";
 const WEB_HEALTH = "http://localhost:3000/health";
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 async function waitForUrl(url: string, label: string, timeoutMs = 180_000): Promise<boolean> {
   const start = Date.now();
@@ -60,7 +70,18 @@ function openUrl(url: string) {
   }
 }
 
-export async function startCommand() {
+async function agentsSupermemoryOk(): Promise<boolean> {
+  try {
+    const res = await fetch(AGENTS_HEALTH, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.supermemory === "ok";
+  } catch {
+    return false;
+  }
+}
+
+export async function startCommand(opts?: { seed?: boolean }) {
   console.log(chalk.bold("\nStarting Holocron...\n"));
 
   if (!assertPrerequisitesOrExit()) {
@@ -74,7 +95,11 @@ export async function startCommand() {
 
   if (!fs.existsSync(envPath)) {
     printInfo("No config found — running setup first...");
-    await setupCommand();
+    if (process.stdin.isTTY) {
+      await setupCommand();
+    } else {
+      await setupNonInteractive();
+    }
   }
 
   let composeFile = getComposePath();
@@ -107,8 +132,23 @@ export async function startCommand() {
     spinner.warn("Some images could not be pulled — will try build/up");
   }
 
+  spinner.text = "Starting Supermemory...";
+  const smHealthy = await ensureSupermemoryHealthyForCli(
+    composeFile,
+    envPath,
+    dataDir,
+    imageTag,
+    migrationsDir,
+    runDockerCompose,
+    { build: true }
+  );
+  if (!smHealthy) {
+    spinner.fail("Supermemory failed to become healthy");
+    process.exit(1);
+  }
+
   spinner.text = "Starting services...";
-  const code = runDockerCompose(
+  let code = runDockerCompose(
     composeFile,
     ["up", "-d", "--build"],
     envPath,
@@ -118,11 +158,41 @@ export async function startCommand() {
   );
 
   if (code !== 0) {
+    spinner.text = "Waiting for Postgres first-time init...";
+    await sleep(30_000);
+    code = runDockerCompose(
+      composeFile,
+      ["up", "-d"],
+      envPath,
+      dataDir,
+      imageTag,
+      migrationsDir
+    );
+  }
+
+  if (code !== 0) {
     spinner.fail("Failed to start services");
     process.exit(1);
   }
 
-  spinner.text = "Waiting for agents...";
+  spinner.text = "Bootstrapping Supermemory...";
+  const smOk = await bootstrapSupermemoryForCli(
+    envPath,
+    composeFile,
+    dataDir,
+    imageTag,
+    migrationsDir,
+    runDockerCompose
+  );
+  if (smOk) {
+    spinner.succeed("Supermemory configured");
+  } else if (!envHasSupermemoryKey(envPath)) {
+    spinner.warn("Supermemory key not captured — memory features disabled until key is set");
+  } else {
+    spinner.warn("Supermemory bootstrap incomplete — check docker logs");
+  }
+
+  spinner.start("Waiting for agents...");
   const agentsOk = await waitForUrl(AGENTS_HEALTH, "Agents");
   if (!agentsOk) {
     spinner.fail("Agents service did not start");
@@ -138,26 +208,26 @@ export async function startCommand() {
 
   spinner.succeed("Services started");
 
-  if (!envHasSupermemoryKey(envPath)) {
-    spinner.start("Capturing Supermemory API key...");
-    const captured = await waitForSupermemoryKey(envPath);
-    if (captured) {
-      spinner.succeed("Supermemory API key saved to ~/.holocron/.env");
-      spinner.start("Restarting agents to load Supermemory key...");
-      runDockerCompose(composeFile, ["restart", "agents"], envPath, dataDir, imageTag, migrationsDir);
-      await waitForUrl(AGENTS_HEALTH, "Agents", 60_000);
-      spinner.succeed("Agents restarted with Supermemory key");
-    } else {
-      spinner.warn("Supermemory key not found — check docker logs for sm_* key");
+  if (envHasSupermemoryKey(envPath)) {
+    const smAgentsOk = await agentsSupermemoryOk();
+    if (!smAgentsOk) {
+      spinner.warn("Agents report supermemory not ok — try `holocron stop` and `holocron start` again");
     }
   }
 
   printSuccess("Docker is running");
   printSuccess("Agents online");
+  if (await checkSupermemoryOnline()) {
+    printSuccess("Supermemory online");
+  }
   printSuccess(`Web ready at ${WEB_URL}`);
 
   openUrl(WEB_URL);
   printInfo("Opened browser");
+
+  if (opts?.seed) {
+    await seedCommand();
+  }
 
   console.log(chalk.bold.green(`\nHolocron is running at ${WEB_URL}`));
   console.log(chalk.dim("Run `holocron stop` to tear down.\n"));

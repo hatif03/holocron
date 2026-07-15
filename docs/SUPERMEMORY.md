@@ -237,6 +237,7 @@ Holocron calls map to Supermemory Local OpenAPI (`http://localhost:6767/v4/opena
 | PDF files | `STORAGE_PATH` | Chunked index | Yes | `customId: ref_{id}` on ingest |
 | LLM config | `llm_config.json` | Preference string | Yes | — |
 | Graph | `graph_nodes` / `graph_edges` | Summary snapshot on save | Yes | Added in v2 |
+| Work delete | Postgres cascade removes graph + gens | `DELETE /v3/documents/bulk` by `work_{id}` containerTag | Yes | Purges SM on `DELETE /api/works/[workId]` |
 
 ## Client strategy
 

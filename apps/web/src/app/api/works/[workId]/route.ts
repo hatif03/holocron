@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { storeMemory, summarizeGraph } from "@/lib/supermemory-client";
+import { storeMemory, summarizeGraph, deleteWorkMemory } from "@/lib/supermemory-client";
 import { buildWriteTrace } from "@/lib/memory-trace";
 import { workTag } from "@holocron/shared";
 
@@ -142,7 +142,11 @@ export async function DELETE(
     }
 
     await db`DELETE FROM research_works WHERE id = ${workId}::uuid`;
-    return NextResponse.json({ ok: true });
+
+    const sm = await deleteWorkMemory(workId);
+    const memoryTrace = buildWriteTrace(workId, "delete", { count: sm.deleted ? 1 : 0 });
+
+    return NextResponse.json({ ok: true, memoryTrace, supermemory: sm });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

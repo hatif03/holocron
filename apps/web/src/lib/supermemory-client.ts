@@ -95,6 +95,34 @@ export async function storeUserPreference(userId: string, content: string): Prom
   });
 }
 
+export async function deleteWorkMemory(workId: string): Promise<{
+  deleted: boolean;
+  containerTag: string;
+}> {
+  const containerTag = workTag(workId);
+  if (!isSupermemoryEnabled()) {
+    return { deleted: false, containerTag };
+  }
+  try {
+    const resp = await fetch(`${BASE_URL}/v3/documents/bulk`, {
+      method: "DELETE",
+      headers: authHeaders(),
+      body: JSON.stringify({ containerTags: [containerTag] }),
+    });
+    const ok = await checkResponse(resp, "deleteWorkMemory");
+    return { deleted: ok, containerTag };
+  } catch (e) {
+    logDev("deleteWorkMemory unreachable", e);
+    return { deleted: false, containerTag };
+  }
+}
+
+export async function countWorkMemories(workId: string, query = "graph planner discover"): Promise<number> {
+  if (!isSupermemoryEnabled()) return 0;
+  const hits = await searchMemoriesRich(workId, query, 10);
+  return hits.length;
+}
+
 export async function searchMemoriesRich(
   workId: string,
   query: string,

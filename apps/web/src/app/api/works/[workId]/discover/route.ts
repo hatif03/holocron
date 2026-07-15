@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { searchSemanticScholar } from "@/lib/agents-client";
+import { searchSemanticScholar, searchArxiv } from "@/lib/agents-client";
 import { scorePaperSimilarity } from "@/lib/discover-score";
 import { buildWriteTrace } from "@/lib/memory-trace";
 import { storeMemory, workTag } from "@/lib/supermemory-client";
@@ -23,17 +23,34 @@ export async function POST(
       LIMIT 1
     `;
     const startData = (startNode?.data ?? {}) as Record<string, unknown>;
-    const paperTitle = String(startData.paper_title || work.title || "");
-    const keywords = String(startData.keywords || work.description || "");
-    const query = [paperTitle, keywords].filter(Boolean).join(" ").trim();
+    const paperTitle = String(startData.paper_title || work.title || "")
+      .normalize("NFKD")
+      .replace(/[^\x00-\x7F]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const keywords = String(startData.keywords || "").trim();
+    let query = [paperTitle, keywords].filter(Boolean).join(" ").trim();
     if (!query) {
       return NextResponse.json(
         { error: "Add a paper title or keywords on the start node first." },
         { status: 400 }
       );
     }
+    if (query.length > 220) query = query.slice(0, 220);
 
-    const { data: raw } = await searchSemanticScholar(query, "all");
+    let { data: raw } = await searchSemanticScholar(query, "all");
+    if (raw.length === 0 && keywords) {
+      ({ data: raw } = await searchSemanticScholar(keywords, "all"));
+    }
+    if (raw.length === 0 && paperTitle) {
+      const shortTitle = paperTitle.split(":")[0]?.trim() || paperTitle;
+      ({ data: raw } = await searchSemanticScholar(shortTitle, "title"));
+    }
+    if (raw.length === 0) {
+      const arxivQuery =
+        keywords || "CO2 emissions life expectancy climate health";
+      ({ data: raw } = await searchArxiv(arxivQuery, "all"));
+    }
     const ranked = raw
       .map((p) => ({
         ...p,

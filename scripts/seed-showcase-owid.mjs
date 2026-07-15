@@ -39,6 +39,7 @@ const NODES = [
     data: {
       status: "complete",
       paper_title: TITLE,
+      keywords: "CO2 emissions, life expectancy, climate health, OWID",
       target_venue: "Nature Climate Change",
       deadline: "2026-12-01",
     },

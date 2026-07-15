@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 /**
  * E2E: create work + graph, verify Supermemory, start paper generation, poll memory.
+ * Default: cleans up work + generation and verifies Supermemory is empty afterward.
+ * Use --no-cleanup to keep artifacts for debugging.
  */
+import { deleteWorkViaApi, searchSupermemoryHits } from "./e2e-cleanup-utils.mjs";
+
 const WEB = process.env.WEB_URL || "http://localhost:3000";
 const AGENTS = process.env.AGENTS_SERVICE_URL || "http://localhost:8000";
+const noCleanup = process.argv.includes("--no-cleanup");
 
 const nodes = [
   {
@@ -101,6 +106,12 @@ function sleep(ms) {
 async function main() {
   console.log("=== Supermemory E2E ===\n");
 
+  let workId;
+  let genId;
+
+  let exitCode = 0;
+
+  try {
   const work = await json(`${WEB}/api/works`, {
     method: "POST",
     body: JSON.stringify({
@@ -108,7 +119,7 @@ async function main() {
       description: "Automated E2E verification of work-scoped memory",
     }),
   });
-  const workId = work.id;
+  workId = work.id;
   console.log(`Created work: ${workId}`);
 
   await json(`${WEB}/api/works/${workId}`, {
@@ -130,7 +141,8 @@ async function main() {
   console.log(`Memory profile enabled=${profile.enabled} hits=${hitCount}`);
   if (!profile.enabled) {
     console.error("FAIL: Supermemory not enabled on web");
-    process.exit(1);
+    exitCode = 1;
+    return;
   }
 
   // Direct search fallback (indexing may lag profile)
@@ -143,7 +155,8 @@ async function main() {
   const agentsHealth = await json(`${AGENTS}/health`);
   if (agentsHealth.supermemory !== "ok") {
     console.error(`FAIL: agents supermemory=${agentsHealth.supermemory}`);
-    process.exit(1);
+    exitCode = 1;
+    return;
   }
   console.log(`Agents supermemory: ${agentsHealth.supermemory}`);
 
@@ -177,7 +190,7 @@ async function main() {
     }),
     timeout: 60_000,
   });
-  const genId = gen.id;
+  genId = gen.id;
   console.log(`\nStarted generation: ${genId}`);
 
   let memoryOk = false;
@@ -215,16 +228,42 @@ async function main() {
 
   if (!memoryOk) {
     console.error("FAIL: No memory hits during generation");
-    process.exit(1);
+    exitCode = 1;
+    return;
   }
   if (finalHealth.supermemory !== "ok") {
     console.error("FAIL: agents lost supermemory connectivity");
-    process.exit(1);
+    exitCode = 1;
+    return;
   }
 
   console.log("\nPASS: Supermemory E2E verification");
   console.log(`Work: ${WEB}/research-graph/${workId}`);
   console.log(`Generation: ${WEB}/paper-generation/${genId}`);
+  } finally {
+    if (!noCleanup && workId) {
+      console.log("\n--- Cleanup ---");
+      if (genId) {
+        await json(`${WEB}/api/generations/${genId}`, { method: "DELETE" }).catch((e) =>
+          console.log(`  Generation delete: ${e.message}`)
+        );
+      }
+      await deleteWorkViaApi(workId);
+      console.log(`  Deleted work ${workId}`);
+      await new Promise((r) => setTimeout(r, 2000));
+      const hits = await searchSupermemoryHits(workId);
+      if (hits > 0) {
+        console.error(`FAIL: Supermemory still has ${hits} hits for work_${workId}`);
+        exitCode = 1;
+      } else {
+        console.log(`  OK: Supermemory empty for work_${workId}`);
+      }
+    } else if (noCleanup) {
+      console.log("\nSkipped cleanup (--no-cleanup)");
+    }
+  }
+
+  process.exit(exitCode);
 }
 
 main().catch((e) => {

@@ -30,6 +30,8 @@ import { Input } from "@/components/ui/input";
 
 import { PageHeader } from "@/components/layout/page-header";
 
+import { DependenciesPanel } from "@/components/setup/DependenciesPanel";
+
 import { restartOnboarding } from "@/components/onboarding/SetupWalkthrough";
 
 
@@ -452,6 +454,14 @@ export default function SettingsPage() {
         icon={Settings}
 
       />
+
+
+
+      <div className="mb-6">
+
+        <DependenciesPanel />
+
+      </div>
 
 
 

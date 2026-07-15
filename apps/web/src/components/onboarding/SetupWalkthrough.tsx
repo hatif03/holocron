@@ -7,8 +7,6 @@ import {
   Bot,
   BookOpen,
   Box,
-  CheckCircle2,
-  Circle,
   Loader2,
   Network,
   Sparkles,
@@ -16,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ServiceBadge } from "@/components/setup/ServiceBadge";
 
 const STORAGE_KEY = "holocron_onboarding_v1";
 
@@ -45,19 +44,6 @@ const TOUR_LINKS = [
   { href: "/paper-generation", label: "Paper Generation", icon: Box },
   { href: "/agents", label: "Agents", icon: Bot },
 ];
-
-function ServiceBadge({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      {ok ? (
-        <CheckCircle2 className="h-4 w-4 text-green-600" />
-      ) : (
-        <Circle className="h-4 w-4 text-muted-foreground" />
-      )}
-      <span>{label}</span>
-    </div>
-  );
-}
 
 export function SetupWalkthrough() {
   const router = useRouter();
@@ -160,10 +146,10 @@ export function SetupWalkthrough() {
 
           {current.id === "services" && (
             <div className="space-y-2 rounded-lg border p-4">
-              <ServiceBadge ok={!!status?.database} label="Database (Postgres)" />
-              <ServiceBadge ok={!!status?.agents} label="Agents service (:8000)" />
-              <ServiceBadge ok={!!status?.supermemory} label="Supermemory Local (:6767)" />
-              <ServiceBadge ok={!!status?.latex} label="LaTeX service (:8081)" />
+              <ServiceBadge status={status?.database ? "ok" : "down"} label="Database (Postgres)" />
+              <ServiceBadge status={status?.agents ? "ok" : "down"} label="Agents service (:8000)" />
+              <ServiceBadge status={status?.supermemory ? "ok" : "down"} label="Supermemory Local (:6767)" />
+              <ServiceBadge status={status?.latex ? "ok" : "down"} label="LaTeX service (:8081)" />
               {!status && (
                 <p className="flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Checking…

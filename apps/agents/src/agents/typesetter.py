@@ -116,14 +116,24 @@ async def compile_latex(req: CompileRequest, max_retries: int = 3) -> CompileRes
         except Exception as e:
             log = str(e)
 
-        main_path = project / req.main_file
-        if main_path.exists() and attempt < max_retries - 1 and log:
+        if attempt < max_retries - 1 and log:
             error_context = log[-2000:]
-            fix = await llm.complete(
-                "Fix LaTeX compilation errors. Return only the corrected LaTeX file content.",
-                f"Errors:\n{error_context}\n\nCurrent file:\n{main_path.read_text(encoding='utf-8')[:4000]}",
-            )
-            main_path.write_text(fix, encoding="utf-8")
+            fix_targets: list[Path] = [project / req.main_file]
+            sections_dir = project / "sections"
+            if sections_dir.is_dir():
+                fix_targets.extend(sorted(sections_dir.glob("*.tex")))
+            bib_path = project / "references.bib"
+            if bib_path.exists():
+                fix_targets.append(bib_path)
+
+            for target in fix_targets:
+                if not target.exists():
+                    continue
+                fix = await llm.complete(
+                    "Fix LaTeX compilation errors. Return only the corrected file content.",
+                    f"Errors:\n{error_context}\n\nFile: {target.name}\n\nCurrent content:\n{target.read_text(encoding='utf-8')[:4000]}",
+                )
+                target.write_text(fix, encoding="utf-8")
             await asyncio.sleep(2**attempt)
 
     return CompileResponse(success=False, pdf_path=None, log=log)

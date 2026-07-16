@@ -52,10 +52,22 @@ def compile_latex(req: CompileRequest):
             log_parts.append(result.stdout + result.stderr)
 
     pdf = project / f"{main.stem}.pdf"
+    full_log = "\n".join(log_parts)
+    warnings: list[str] = []
+    for line in full_log.splitlines():
+        if "LaTeX Warning: Reference" in line and "undefined" in line:
+            warnings.append(line.strip())
+        if "LaTeX Warning: Citation" in line and "undefined" in line:
+            warnings.append(line.strip())
+        if "Unable to load picture or PDF file" in line:
+            warnings.append(line.strip())
+    if warnings:
+        full_log += "\n\n=== Holocron compile warnings ===\n" + "\n".join(warnings)
+
     return CompileResponse(
         success=pdf.exists(),
         pdf_path=str(pdf) if pdf.exists() else None,
-        log="\n".join(log_parts),
+        log=full_log,
     )
 
 

@@ -53,7 +53,10 @@ class GraphContract:
         ctx = extract_graph_context(graph)
         contract = cls(ctx=ctx)
         contract.discovered_keys = [f"discovered{i}" for i in range(len(discovered_refs or []))]
-        contract.literature_keys = [f"lit{i}" for i in range(len(ctx.literature))]
+        literature_with_bib = [
+            lit for lit in ctx.literature if str(lit.get("bibtex") or "").strip()
+        ]
+        contract.literature_keys = [f"lit{i}" for i in range(len(literature_with_bib))]
 
         lit_index = 0
         for node in graph.get("nodes") or []:
@@ -75,8 +78,10 @@ class GraphContract:
             label = str(node.get("label") or data.get("label") or nid)
             bib_key = None
             if ntype == "literature":
-                bib_key = f"lit{lit_index}"
-                lit_index += 1
+                bib = str(data.get("bibtex") or "").strip()
+                if bib:
+                    bib_key = f"lit{lit_index}"
+                    lit_index += 1
 
             contract.obligations.append(
                 NodeObligation(

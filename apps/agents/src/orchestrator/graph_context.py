@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 
@@ -167,8 +169,11 @@ def _node_data(node: dict) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def _text_fields(data: dict[str, Any]) -> list[str]:
+def _text_fields(data: dict[str, Any], *, include_code: bool = False) -> list[str]:
     parts: list[str] = []
+    skip_keys = set()
+    if not include_code:
+        skip_keys = {"pseudo_code", "script_source"}
     for key in (
         "label", "body", "rationale", "context", "description", "definition",
         "user_notes", "pseudo_code", "environment", "value", "significance",
@@ -176,6 +181,8 @@ def _text_fields(data: dict[str, Any]) -> list[str]:
         "bibtex", "source_note", "related_terms", "unit", "target_value",
         "script_source", "notes", "file_path", "data_path", "figure_path",
     ):
+        if key in skip_keys:
+            continue
         val = data.get(key)
         if val and isinstance(val, str):
             parts.append(f"{key}: {val}")
@@ -304,9 +311,14 @@ def derive_query_from_graph(graph: dict[str, Any]) -> str:
     return "academic research paper"
 
 
+def _rewrite_bib_key(bib: str, new_key: str) -> str:
+    return re.sub(r"(@\w+\s*\{)[^,\s]+", rf"\g<1>{new_key}", bib.strip(), count=1)
+
+
 def build_bibtex_entries(
     discovered_refs: list[dict[str, Any]],
     graph: dict[str, Any],
+    library_bib: list[str] | None = None,
 ) -> str:
     entries: list[str] = []
     seen: set[str] = set()
@@ -335,19 +347,47 @@ def build_bibtex_entries(
         add_entry(key, bib)
 
     ctx = extract_graph_context(graph)
-    for i, lit in enumerate(ctx.literature):
+    lit_idx = 0
+    for lit in ctx.literature:
         bib = lit.get("bibtex") or ""
         if bib:
-            add_entry(f"lit{i}", bib)
+            key = f"lit{lit_idx}"
+            add_entry(key, _rewrite_bib_key(bib, key))
+            lit_idx += 1
+
+    lib_idx = 0
+    for bib in library_bib or []:
+        if not bib.strip():
+            continue
+        key_match = re.search(r"@\w+\s*\{\s*([^,\s]+)", bib)
+        key = key_match.group(1) if key_match else f"lib{lib_idx}"
+        add_entry(key, bib)
+        lib_idx += 1
 
     return "\n\n".join(entries) + ("\n" if entries else "")
+
+
+def _svg_to_png(src: Path, dest: Path) -> bool:
+    import subprocess
+
+    for cmd in (
+        ["rsvg-convert", "-o", str(dest), str(src)],
+        ["magick", "convert", str(src), str(dest)],
+    ):
+        try:
+            r = subprocess.run(cmd, capture_output=True, timeout=30)
+            if r.returncode == 0 and dest.is_file():
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def copy_figure_assets(
     graph: dict[str, Any],
     output_dir: str,
     storage_path: str,
-) -> list[str]:
+) -> tuple[list[str], list[str]]:
     import shutil
     from pathlib import Path
 
@@ -355,17 +395,27 @@ def copy_figure_assets(
     fig_dir = Path(output_dir) / "figures"
     fig_dir.mkdir(exist_ok=True)
     copied: list[str] = []
+    warnings: list[str] = []
     for fig in ctx.figures:
         path = fig.get("figure_path") or ""
         if not path:
             continue
         src = Path(storage_path) / path.replace("\\", "/")
         if not src.is_file():
+            label = fig.get("label") or path
+            warnings.append(f"Figure asset missing on disk: {path} ({label})")
+            continue
+        if src.suffix.lower() == ".svg":
+            dest = fig_dir / f"{src.stem}.png"
+            if _svg_to_png(src, dest):
+                copied.append(f"figures/{dest.name}")
+            else:
+                warnings.append(f"SVG figure could not be converted to PNG: {path}")
             continue
         dest = fig_dir / src.name
         shutil.copy2(src, dest)
         copied.append(f"figures/{src.name}")
-    return copied
+    return copied, warnings
 
 
 def _latex_escape(text: str) -> str:
@@ -399,12 +449,15 @@ def latex_equations_from_graph(ctx: GraphContext) -> str:
         if not formula:
             continue
         label = str(metric.get("label") or metric.get("name") or "Metric")
-        safe_formula = formula if "\\" in formula else formula
-        blocks.append(
-            f"\\begin{{equation}}\n"
-            f"{safe_formula}\n"
-            f"\\end{{equation}}"
-        )
+        safe_formula = _latex_escape(formula) if "\\" not in formula else formula
+        if "\\begin{equation}" not in safe_formula:
+            blocks.append(
+                f"\\begin{{equation}}\n"
+                f"{safe_formula}\n"
+                f"\\end{{equation}}"
+            )
+        else:
+            blocks.append(safe_formula)
         blocks.append(f"\\textit{{{_latex_escape(label)}}}")
     return "\n\n".join(blocks)
 
@@ -417,18 +470,18 @@ def latex_code_from_graph(ctx: GraphContext) -> str:
             continue
         label = str(method.get("label") or "Analysis procedure")
         blocks.append(f"\\textbf{{{_latex_escape(label)}}}")
-        blocks.append("\\begin{verbatim}")
+        blocks.append("\\begin{lstlisting}[language=Python,breaklines=true]")
         blocks.append(code)
-        blocks.append("\\end{verbatim}")
+        blocks.append("\\end{lstlisting}")
     for fig in ctx.figures:
         script = str(fig.get("script_source") or "").strip()
         if not script:
             continue
         caption = str(fig.get("caption") or fig.get("label") or "Figure script")
         blocks.append(f"\\textbf{{{_latex_escape(caption)}}}")
-        blocks.append("\\begin{verbatim}")
+        blocks.append("\\begin{lstlisting}[language=Python,breaklines=true]")
         blocks.append(script)
-        blocks.append("\\end{verbatim}")
+        blocks.append("\\end{lstlisting}")
     return "\n\n".join(blocks)
 
 
@@ -493,6 +546,18 @@ def _figure_caption_for_path(ctx: GraphContext, fig_path: str) -> str:
     return _latex_escape(f"Figure: {name}")
 
 
+def _figure_label_for_path(ctx: GraphContext, fig_path: str) -> str:
+    name = fig_path.split("/")[-1]
+    for fig in ctx.figures:
+        uploaded = str(fig.get("figure_path") or "")
+        if uploaded and name in uploaded.replace("\\", "/"):
+            key = str(fig.get("id") or fig.get("node_key") or fig.get("label") or name)
+            safe = re.sub(r"[^a-zA-Z0-9_]", "_", key).strip("_").lower()
+            return safe or "figure"
+    stem = Path(name).stem if "." in name else name
+    return re.sub(r"[^a-zA-Z0-9_]", "_", stem).strip("_").lower() or "figure"
+
+
 def latex_figures_and_tables(
     ctx: GraphContext,
     copied_figures: list[str],
@@ -502,20 +567,24 @@ def latex_figures_and_tables(
     blocks: list[str] = []
     for fig_path in copied_figures:
         caption = _figure_caption_for_path(ctx, fig_path)
+        label = _figure_label_for_path(ctx, fig_path)
         blocks.append(
-            f"\\begin{{figure}}[h]\n\\centering\n"
+            f"\\begin{{figure}}[tbp]\n\\centering\n"
             f"\\includegraphics[width=\\linewidth]{{{fig_path}}}\n"
-            f"\\caption{{{caption}}}\n\\end{{figure}}"
+            f"\\caption{{{caption}}}\n"
+            f"\\label{{fig:{label}}}\n\\end{{figure}}"
         )
-    for gen in generated_figures or []:
+    for i, gen in enumerate(generated_figures or []):
         path = gen.get("path") or ""
         if not path:
             continue
         caption = _latex_escape(gen.get("caption") or "Generated chart")
+        label = re.sub(r"[^a-zA-Z0-9_]", "_", Path(path).stem).lower() or f"gen_{i}"
         blocks.append(
-            f"\\begin{{figure}}[h]\n\\centering\n"
+            f"\\begin{{figure}}[tbp]\n\\centering\n"
             f"\\includegraphics[width=\\linewidth]{{{path}}}\n"
-            f"\\caption{{{caption}}}\n\\end{{figure}}"
+            f"\\caption{{{caption}}}\n"
+            f"\\label{{fig:{label}}}\n\\end{{figure}}"
         )
     for tbl in ctx.tables:
         blocks.append(latex_table_from_graph(tbl))

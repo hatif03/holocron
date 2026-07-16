@@ -25,6 +25,9 @@ services:
       - ${HOLOCRON_ENV_FILE}
     environment:
       SUPERMEMORY_API_URL: http://host.docker.internal:6767
+      STORAGE_PATH: /data/storage
+    volumes:
+      - ${HOLOCRON_DATA}/storage:/data/storage
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -37,6 +40,10 @@ services:
     image: ghcr.io/hatif03/holocron-latex:${HOLOCRON_IMAGE_TAG:-1.0.0}
     ports:
       - "8081:8080"
+    environment:
+      STORAGE_PATH: /data/storage
+    volumes:
+      - ${HOLOCRON_DATA}/storage:/data/storage
 
   web:
     image: ghcr.io/hatif03/holocron-web:${HOLOCRON_IMAGE_TAG:-1.0.0}
@@ -49,6 +56,9 @@ services:
       AGENTS_SERVICE_URL: http://agents:8000
       LATEX_SERVICE_URL: http://latex:8080
       SUPERMEMORY_API_URL: http://host.docker.internal:6767
+      STORAGE_PATH: /data/storage
+    volumes:
+      - ${HOLOCRON_DATA}/storage:/data/storage
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

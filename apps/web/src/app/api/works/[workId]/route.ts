@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { storeMemory, summarizeGraph, deleteWorkMemory } from "@/lib/supermemory-client";
 import { buildWriteTrace } from "@/lib/memory-trace";
 import { workTag } from "@holocron/shared";
+import { deleteWorkArtifacts } from "@/lib/storage-cleanup";
 
 export async function GET(
   _req: NextRequest,
@@ -141,7 +142,14 @@ export async function DELETE(
       );
     }
 
+    const gens = await db`
+      SELECT id FROM paper_generations WHERE work_id = ${workId}::uuid
+    `;
+    const genIds = gens.map((g) => String(g.id));
+
     await db`DELETE FROM research_works WHERE id = ${workId}::uuid`;
+
+    deleteWorkArtifacts(workId, genIds);
 
     const sm = await deleteWorkMemory(workId);
     const memoryTrace = buildWriteTrace(workId, "delete", { count: sm.deleted ? 1 : 0 });

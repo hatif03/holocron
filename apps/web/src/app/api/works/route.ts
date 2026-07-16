@@ -9,29 +9,37 @@ export async function GET(req: NextRequest) {
     const rows = search
       ? await db`
           SELECT w.*,
-            (SELECT COUNT(*) FROM graph_nodes gn WHERE gn.work_id = w.id) as node_count,
-            (SELECT COUNT(*) FROM graph_edges ge WHERE ge.work_id = w.id) as edge_count,
-            (SELECT COUNT(*)::int FROM (
-              SELECT reference_id::text AS rid FROM work_references WHERE work_id = w.id
-              UNION
-              SELECT data->>'reference_id' AS rid FROM graph_nodes
-              WHERE work_id = w.id AND data->>'reference_id' IS NOT NULL AND data->>'reference_id' != ''
-            ) refs) as ref_count
+            COALESCE(gn.node_count, 0) AS node_count,
+            COALESCE(ge.edge_count, 0) AS edge_count,
+            COALESCE(wr.ref_count, 0) AS ref_count
           FROM research_works w
+          LEFT JOIN (
+            SELECT work_id, COUNT(*)::int AS node_count FROM graph_nodes GROUP BY work_id
+          ) gn ON gn.work_id = w.id
+          LEFT JOIN (
+            SELECT work_id, COUNT(*)::int AS edge_count FROM graph_edges GROUP BY work_id
+          ) ge ON ge.work_id = w.id
+          LEFT JOIN (
+            SELECT work_id, COUNT(*)::int AS ref_count FROM work_references GROUP BY work_id
+          ) wr ON wr.work_id = w.id
           WHERE w.title ILIKE ${"%" + search + "%"}
           ORDER BY w.updated_at DESC
         `
       : await db`
           SELECT w.*,
-            (SELECT COUNT(*) FROM graph_nodes gn WHERE gn.work_id = w.id) as node_count,
-            (SELECT COUNT(*) FROM graph_edges ge WHERE ge.work_id = w.id) as edge_count,
-            (SELECT COUNT(*)::int FROM (
-              SELECT reference_id::text AS rid FROM work_references WHERE work_id = w.id
-              UNION
-              SELECT data->>'reference_id' AS rid FROM graph_nodes
-              WHERE work_id = w.id AND data->>'reference_id' IS NOT NULL AND data->>'reference_id' != ''
-            ) refs) as ref_count
+            COALESCE(gn.node_count, 0) AS node_count,
+            COALESCE(ge.edge_count, 0) AS edge_count,
+            COALESCE(wr.ref_count, 0) AS ref_count
           FROM research_works w
+          LEFT JOIN (
+            SELECT work_id, COUNT(*)::int AS node_count FROM graph_nodes GROUP BY work_id
+          ) gn ON gn.work_id = w.id
+          LEFT JOIN (
+            SELECT work_id, COUNT(*)::int AS edge_count FROM graph_edges GROUP BY work_id
+          ) ge ON ge.work_id = w.id
+          LEFT JOIN (
+            SELECT work_id, COUNT(*)::int AS ref_count FROM work_references GROUP BY work_id
+          ) wr ON wr.work_id = w.id
           ORDER BY w.updated_at DESC
         `;
     return NextResponse.json(rows);

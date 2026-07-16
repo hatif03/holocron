@@ -130,7 +130,7 @@ export function DetailPanel({
 }: DetailPanelProps) {
   if (!mode) {
     return (
-      <Card className="flex min-h-[200px] items-center justify-center p-4 text-sm text-muted-foreground lg:min-h-[420px] lg:flex-1">
+      <Card className="flex h-full min-h-[200px] items-center justify-center p-4 text-sm text-muted-foreground lg:min-h-0">
         Select a log entry or file to view details
       </Card>
     );
@@ -158,7 +158,7 @@ export function DetailPanel({
                   : "Details";
 
   return (
-    <Card className="flex min-h-[200px] flex-col overflow-hidden p-4 lg:min-h-[420px] lg:flex-1">
+    <Card className="flex h-full min-h-[200px] flex-col overflow-hidden p-4 lg:min-h-0">
       <div className="mb-3 flex shrink-0 items-center justify-between">
         <h2 className="truncate text-sm font-semibold">{title}</h2>
         <button type="button" onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
@@ -347,7 +347,7 @@ export function DetailPanel({
         {mode === "pdf" && pdfUrl && (
           <iframe
             src={pdfUrl}
-            className="h-[60vh] w-full rounded-lg border border-border"
+            className="h-full min-h-[320px] w-full rounded-lg border border-border"
             title="Paper PDF"
           />
         )}

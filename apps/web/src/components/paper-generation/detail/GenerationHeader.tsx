@@ -22,7 +22,7 @@ export function GenerationHeader({ gen, genId, onCancel, onViewCitations }: Gene
   return (
     <div className="flex items-start justify-between mb-4 gap-4">
       <div className="flex items-start gap-3 min-w-0">
-        <BackLink href="/paper-generation" label="Paper Generation" className="mt-1" />
+        <BackLink href="/paper-generation" className="mt-1" />
         <div className="min-w-0">
           <h1 className="text-xl font-semibold leading-tight tracking-tight">
             {(gen.title as string) || "Paper Generation"}

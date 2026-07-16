@@ -9,7 +9,7 @@ import {
   type CitationsSummary,
 } from "@/components/paper-generation/detail/DetailPanel";
 import { SupermemoryContext } from "@/components/paper-generation/detail/SupermemoryContext";
-import { PageScroll } from "@/components/layout/page-scroll";
+import { GenerationDetailSkeleton } from "@/components/ui/generation-detail-skeleton";
 import { generationFilesUrl, generationFileUrl } from "@/lib/storage-utils";
 import { isImagePath, isTextPreviewPath } from "@/lib/file-mime";
 import { parseBibtex, extractCiteKeys } from "@/lib/bib-utils";
@@ -224,7 +224,7 @@ export default function PaperGenerationDetailPage({
   })();
 
   if (!gen) {
-    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+    return <GenerationDetailSkeleton />;
   }
 
   return (
@@ -238,7 +238,7 @@ export default function PaperGenerationDetailPage({
         />
       </div>
 
-      <PageScroll contentClassName="px-4 pb-4 sm:px-6">
+      <div className="shrink-0 px-4 sm:px-6">
         <SupermemoryContext
           genId={genId}
           workId={gen.work_id as string | undefined}
@@ -247,8 +247,9 @@ export default function PaperGenerationDetailPage({
           phaseQuery={phaseQuery}
           events={events}
         />
+      </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_1.2fr] lg:min-h-[480px] lg:max-h-[calc(100vh-12rem)]">
+      <div className="grid min-h-0 flex-1 gap-4 px-4 pb-4 sm:px-6 lg:grid-cols-[1fr_1fr_1.2fr]">
           <ProcessLogPanel
             events={events}
             selectedEventIndex={selectedEventIndex}
@@ -281,7 +282,6 @@ export default function PaperGenerationDetailPage({
             }}
           />
         </div>
-      </PageScroll>
     </div>
   );
 }

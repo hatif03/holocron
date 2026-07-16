@@ -98,7 +98,7 @@ export function ExplorerPanel({ fileTree, selectedPath, onSelectFile }: Explorer
   const fileCount = fileTree.reduce((acc, n) => acc + (n.children?.length || (n.type === "file" ? 1 : 0)), 0);
 
   return (
-    <Card className="flex min-h-[200px] flex-col overflow-hidden p-4 lg:min-h-[420px] lg:flex-1">
+    <Card className="flex h-full min-h-[200px] flex-col overflow-hidden p-4 lg:min-h-0">
       <div className="flex items-center justify-between mb-3 shrink-0">
         <h2 className="font-semibold text-sm flex items-center gap-2">
           <FileText className="h-4 w-4" />

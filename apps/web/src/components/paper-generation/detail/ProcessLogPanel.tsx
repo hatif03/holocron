@@ -78,7 +78,7 @@ export function ProcessLogPanel({
   const terminal = isTerminalStatus(generationStatus);
 
   return (
-    <Card className="flex min-h-[200px] flex-col overflow-hidden p-4 lg:min-h-[420px] lg:flex-1">
+    <Card className="flex h-full min-h-[200px] flex-col overflow-hidden p-4 lg:min-h-0">
       <h2 className="font-medium text-sm mb-3 shrink-0">Process Log</h2>
       <div className="min-h-0 flex-1 overflow-y-auto">
 

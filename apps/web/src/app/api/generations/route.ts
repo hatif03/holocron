@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { startGeneration } from "@/lib/agents-client";
 import { syncGenerationsFromStorage } from "@/lib/sync-generations";
+import { shouldSyncGenerationsFromStorage, markSyncGenerationsDone } from "@/lib/sync-throttle";
 import { buildGraphFromMetadata, LOCAL_USER_ID } from "@holocron/shared";
 import { v4 as uuidv4 } from "uuid";
 
@@ -10,8 +11,10 @@ export async function GET(req: NextRequest) {
     const search = req.nextUrl.searchParams.get("search") || "";
     const db = getDb();
 
-    // Register on-disk generations (e.g. from CLI) so the dashboard can list them.
-    await syncGenerationsFromStorage(db);
+    if (shouldSyncGenerationsFromStorage()) {
+      await syncGenerationsFromStorage(db);
+      markSyncGenerationsDone();
+    }
 
     const pattern = search ? `%${search}%` : null;
     const rows = pattern
@@ -63,6 +66,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "workId required" }, { status: 400 });
     }
 
+    const libRefs = await db`
+      SELECT rl.bibtex FROM work_references wr
+      JOIN references_lib rl ON rl.id = wr.reference_id
+      WHERE wr.work_id = ${workId}::uuid AND rl.bibtex IS NOT NULL AND rl.bibtex != ''
+    `;
+    const libraryBib = libRefs.map((r) => String(r.bibtex)).filter(Boolean);
+
     await db`
       INSERT INTO paper_generations (id, work_id, status, config, title, source, current_step)
       VALUES (
@@ -79,6 +89,7 @@ export async function POST(req: NextRequest) {
         graph,
         config: body.config || {},
         title,
+        library_bib: libraryBib,
       });
     } catch (err) {
       await db`

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import type postgres from "postgres";
 import { getStoragePath } from "@/lib/storage-path";
+import { readDeletedGenerationIds } from "@/lib/storage-cleanup";
 
 type Sql = ReturnType<typeof postgres>;
 
@@ -42,6 +43,8 @@ export async function syncGenerationsFromStorage(db: Sql): Promise<number> {
 
   let imported = 0;
 
+  const tombstones = readDeletedGenerationIds();
+
   for (const name of fs.readdirSync(genRoot)) {
     const genDir = path.join(genRoot, name);
     if (!fs.statSync(genDir).isDirectory()) continue;
@@ -49,6 +52,7 @@ export async function syncGenerationsFromStorage(db: Sql): Promise<number> {
     const uuidRe =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRe.test(name)) continue;
+    if (tombstones.has(name)) continue;
 
     const existing = await db`
       SELECT id FROM paper_generations WHERE id = ${name}::uuid LIMIT 1

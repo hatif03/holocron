@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { getGenerationStatus } from "@/lib/agents-client";
 import fs from "fs";
 import path from "path";
+import { deleteGenerationArtifacts } from "@/lib/storage-cleanup";
 import { getStoragePath } from "@/lib/storage-path";
 
 interface FileNode {
@@ -11,6 +12,14 @@ interface FileNode {
   size: number;
   type: "file" | "folder";
   children?: FileNode[];
+}
+
+const TERMINAL = new Set(["completed", "completed_with_warnings", "failed", "cancelled"]);
+
+const fileTreeCache = new Map<string, { mtimeMs: number; tree: FileNode[] }>();
+
+function isTerminalStatus(status: string): boolean {
+  return TERMINAL.has(status);
 }
 
 export async function GET(
@@ -40,13 +49,18 @@ export async function GET(
       return NextResponse.json({ content, words, path: fileParam });
     }
 
+    const status = String(gen.status || "");
+    const terminal = isTerminalStatus(status);
+
     let agentStatus = null;
     let agentsReachable = false;
-    try {
-      agentStatus = await getGenerationStatus(genId);
-      agentsReachable = true;
-    } catch {
-      /* agents offline */
+    if (!terminal || !fs.existsSync(outputDir)) {
+      try {
+        agentStatus = await getGenerationStatus(genId);
+        agentsReachable = true;
+      } catch {
+        /* agents offline */
+      }
     }
 
     if (agentStatus?.result && (gen.status === "running" || agentStatus.status?.includes("completed"))) {
@@ -62,18 +76,19 @@ export async function GET(
     }
 
     if (agentStatus?.events?.length) {
-      for (const ev of agentStatus.events) {
-        const exists = await db`
-          SELECT 1 FROM generation_events
-          WHERE generation_id = ${genId}::uuid AND message = ${ev.message}
-          LIMIT 1
+      const existing = await db`
+        SELECT message FROM generation_events
+        WHERE generation_id = ${genId}::uuid
+      `;
+      const seen = new Set(existing.map((r) => String(r.message)));
+      const toInsert = agentStatus.events.filter(
+        (ev: { message: string }) => !seen.has(ev.message)
+      );
+      for (const ev of toInsert) {
+        await db`
+          INSERT INTO generation_events (generation_id, agent, event_type, message, metadata)
+          VALUES (${genId}::uuid, ${ev.agent}, ${ev.event_type}, ${ev.message}, ${JSON.stringify(ev.metadata || {})}::jsonb)
         `;
-        if (!exists.length) {
-          await db`
-            INSERT INTO generation_events (generation_id, agent, event_type, message, metadata)
-            VALUES (${genId}::uuid, ${ev.agent}, ${ev.event_type}, ${ev.message}, ${JSON.stringify(ev.metadata || {})}::jsonb)
-          `;
-        }
       }
 
       const lastEv = agentStatus.events[agentStatus.events.length - 1];
@@ -107,7 +122,19 @@ export async function GET(
 
     let fileTree: FileNode[] = [];
     if (fs.existsSync(outputDir)) {
-      fileTree = buildFileTree(outputDir);
+      let mtimeMs = 0;
+      try {
+        mtimeMs = fs.statSync(outputDir).mtimeMs;
+      } catch {
+        mtimeMs = 0;
+      }
+      const cached = fileTreeCache.get(genId);
+      if (cached && cached.mtimeMs === mtimeMs) {
+        fileTree = cached.tree;
+      } else {
+        fileTree = buildFileTree(outputDir);
+        fileTreeCache.set(genId, { mtimeMs, tree: fileTree });
+      }
     }
 
     return NextResponse.json({
@@ -131,6 +158,7 @@ export async function DELETE(
     const { genId } = await params;
     const db = getDb();
     await db`DELETE FROM paper_generations WHERE id = ${genId}::uuid`;
+    deleteGenerationArtifacts(genId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
@@ -189,13 +217,16 @@ function _buildRawTree(dir: string, base = dir): FileNode[] {
 function groupFileTree(nodes: FileNode[]): FileNode[] {
   const sections: FileNode[] = [];
   const rootFiles: FileNode[] = [];
+  let figuresFolder: FileNode | null = null;
 
   for (const node of nodes) {
     if (node.type === "folder" && node.name === "sections" && node.children?.length) {
       sections.push(...node.children);
+    } else if (node.type === "folder" && node.name === "figures") {
+      figuresFolder = node;
     } else if (node.type === "file") {
       rootFiles.push(node);
-    } else if (node.type === "folder" && node.name !== "figures") {
+    } else if (node.type === "folder") {
       rootFiles.push(node);
     }
   }
@@ -208,6 +239,15 @@ function groupFileTree(nodes: FileNode[]): FileNode[] {
       size: 0,
       type: "folder",
       children: sections,
+    });
+  }
+  if (figuresFolder?.children?.length) {
+    grouped.push({
+      name: "Figures",
+      path: "figures",
+      size: 0,
+      type: "folder",
+      children: figuresFolder.children,
     });
   }
   if (rootFiles.length) {

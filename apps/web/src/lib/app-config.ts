@@ -54,11 +54,16 @@ export function formatBytes(n: number): string {
 
 export function getStorageBreakdown() {
   const root = getStoragePath();
+  const works = dirSizeBytes(path.join(root, "works"));
+  const generations = dirSizeBytes(path.join(root, "generations"));
+  const uploads = dirSizeBytes(path.join(root, "uploads"));
+  const references = dirSizeBytes(path.join(root, "references"));
   return {
     storagePath: root,
-    works: dirSizeBytes(path.join(root, "works")),
-    generations: dirSizeBytes(path.join(root, "generations")),
-    uploads: dirSizeBytes(path.join(root, "uploads")),
-    total: dirSizeBytes(root),
+    works,
+    generations,
+    uploads,
+    references,
+    total: works + generations + uploads + references,
   };
 }

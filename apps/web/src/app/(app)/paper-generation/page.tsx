@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,13 @@ import { MetadataWizard } from "@/components/paper-generation/MetadataWizard";
 import { PageToolbar } from "@/components/layout/page-toolbar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const ACTIVE = new Set(["running", "pending"]);
+
 export default function PaperGenerationListPage() {
   const [generations, setGenerations] = useState<GenerationItem[]>([]);
   const [search, setSearch] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
+  const hasActiveRef = useRef(false);
 
   const load = async (q = "") => {
     const url = q
@@ -20,15 +23,19 @@ export default function PaperGenerationListPage() {
       : "/api/generations";
     const res = await fetch(url);
     const data = await res.json();
-    if (Array.isArray(data)) setGenerations(data);
+    if (Array.isArray(data)) {
+      setGenerations(data);
+      hasActiveRef.current = data.some((g) => ACTIVE.has(String(g.status)));
+    }
   };
 
   useEffect(() => {
-    load();
-    const interval = setInterval(() => load(search), 5000);
+    load(search);
+    const interval = setInterval(() => {
+      if (hasActiveRef.current) load(search);
+    }, 5000);
     return () => clearInterval(interval);
   }, [search]);
-
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this generation?")) return;
     await fetch(`/api/generations/${id}`, { method: "DELETE" });
@@ -61,7 +68,7 @@ export default function PaperGenerationListPage() {
         </div>
       </PageToolbar>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-2 p-3">
           {generations.map((gen) => (
             <GenerationCard key={gen.id} gen={gen} onDelete={() => handleDelete(gen.id)} />

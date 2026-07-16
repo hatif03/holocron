@@ -125,7 +125,7 @@ export default function ResearchGraphPage() {
         </div>
       </PageToolbar>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {works.map((work) => (
             <WorkCard

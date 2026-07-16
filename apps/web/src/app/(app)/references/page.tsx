@@ -71,7 +71,7 @@ export default function ReferencesPage() {
         </div>
       </PageToolbar>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-2 p-3">
           {refs.map((ref) => (
             <ReferenceCard

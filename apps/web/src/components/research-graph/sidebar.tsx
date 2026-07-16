@@ -85,13 +85,13 @@ export function GraphSidebar({
   };
 
   return (
-    <aside className="w-[264px] border-r border-border bg-card flex flex-col shrink-0">
+    <aside className="w-[292px] border-r border-sidebar-border bg-sidebar flex flex-col shrink-0">
       <div className="flex border-b border-border overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
-            className={`shrink-0 px-2 py-2.5 text-[10px] font-medium transition-colors ${
+            className={`shrink-0 px-2.5 py-2.5 text-xs font-medium transition-colors ${
               activeTab === tab
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted-foreground hover:text-foreground"

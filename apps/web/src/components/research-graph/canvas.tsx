@@ -267,7 +267,7 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
   );
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3 gap-4">
         <div className="flex items-start gap-3 min-w-0 flex-1">
           <BackLink href="/research-graph" label="Research Graph" className="mt-1" />

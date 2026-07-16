@@ -29,6 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { DependenciesPanel } from "@/components/setup/DependenciesPanel";
 
@@ -83,17 +84,15 @@ interface AppKeys {
 
 
 interface StorageInfo {
-
   storagePath: string;
-
   worksFormatted: string;
-
   generationsFormatted: string;
-
   uploadsFormatted: string;
-
+  referencesFormatted?: string;
   totalFormatted: string;
-
+  generationCount?: number;
+  persisted?: boolean;
+  message?: string;
 }
 
 
@@ -443,7 +442,9 @@ export default function SettingsPage() {
 
   return (
 
-    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+    <div className="flex h-full min-h-0 flex-col">
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
 
       <PageHeader
 
@@ -808,6 +809,9 @@ export default function SettingsPage() {
             All data stays on this machine under{" "}
 
             <code className="text-xs text-foreground">{storage?.storagePath || "./storage"}</code>.
+            {storage?.message && (
+              <span className="block mt-1 text-xs text-muted-foreground">{storage.message}</span>
+            )}
 
           </p>
 
@@ -818,6 +822,8 @@ export default function SettingsPage() {
               <li>Works & assets: {storage.worksFormatted}</li>
 
               <li>Generations: {storage.generationsFormatted}</li>
+
+              <li>References: {storage.referencesFormatted || "—"}</li>
 
               <li>Uploads: {storage.uploadsFormatted}</li>
 
@@ -886,7 +892,8 @@ export default function SettingsPage() {
         <code className="font-mono">holocron start</code> for one-command local setup.
 
       </p>
-
+        </div>
+      </ScrollArea>
     </div>
 
   );

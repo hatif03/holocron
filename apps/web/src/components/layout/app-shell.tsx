@@ -175,7 +175,7 @@ function ShellHeader() {
   const title = routeTitles[base] ?? "Holocron";
 
   return (
-    <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
+    <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-1 h-4" />
       <span className="text-sm font-medium">{title}</span>

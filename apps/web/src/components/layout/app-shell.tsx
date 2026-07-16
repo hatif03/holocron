@@ -57,7 +57,7 @@ function AppSidebar() {
                 <span className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
                   <HolocronLogo size={22} className="text-sidebar-foreground" />
                 </span>
-                <span className="font-semibold group-data-[collapsible=icon]:hidden">
+                <span className="font-display text-lg font-normal tracking-tight group-data-[collapsible=icon]:hidden">
                   Holocron
                 </span>
               </Link>

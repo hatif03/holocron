@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { GenerationCard, type GenerationItem } from "@/components/paper-generation/GenerationCard";
 import { MetadataWizard } from "@/components/paper-generation/MetadataWizard";
 import { PageToolbar } from "@/components/layout/page-toolbar";
+import { GenerationListSkeleton } from "@/components/ui/generation-list-skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ACTIVE = new Set(["running", "pending"]);
@@ -15,6 +16,7 @@ export default function PaperGenerationListPage() {
   const [generations, setGenerations] = useState<GenerationItem[]>([]);
   const [search, setSearch] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const hasActiveRef = useRef(false);
 
   const load = async (q = "") => {
@@ -27,6 +29,7 @@ export default function PaperGenerationListPage() {
       setGenerations(data);
       hasActiveRef.current = data.some((g) => ACTIVE.has(String(g.status)));
     }
+    setInitialLoading(false);
   };
 
   useEffect(() => {
@@ -69,6 +72,9 @@ export default function PaperGenerationListPage() {
       </PageToolbar>
 
       <ScrollArea className="flex-1 min-h-0">
+        {initialLoading ? (
+          <GenerationListSkeleton />
+        ) : (
         <div className="space-y-2 p-3">
           {generations.map((gen) => (
             <GenerationCard key={gen.id} gen={gen} onDelete={() => handleDelete(gen.id)} />
@@ -79,6 +85,7 @@ export default function PaperGenerationListPage() {
             </p>
           )}
         </div>
+        )}
       </ScrollArea>
 
       <MetadataWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />

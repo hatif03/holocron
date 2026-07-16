@@ -33,6 +33,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { DependenciesPanel } from "@/components/setup/DependenciesPanel";
 
+import { SettingsSkeleton } from "@/components/ui/settings-skeleton";
+
 import { restartOnboarding } from "@/components/onboarding/SetupWalkthrough";
 
 
@@ -443,6 +445,9 @@ export default function SettingsPage() {
   return (
 
     <div className="flex h-full min-h-0 flex-col">
+      {!config ? (
+        <SettingsSkeleton />
+      ) : (
       <ScrollArea className="flex-1 min-h-0">
         <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
 
@@ -894,6 +899,7 @@ export default function SettingsPage() {
       </p>
         </div>
       </ScrollArea>
+      )}
     </div>
 
   );

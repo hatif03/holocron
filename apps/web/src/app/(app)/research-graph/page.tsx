@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SimpleDialog } from "@/components/ui/simple-dialog";
 import { PageToolbar } from "@/components/layout/page-toolbar";
 import { WorkCard, type WorkItem } from "@/components/research-graph/WorkCard";
+import { WorkListSkeleton } from "@/components/ui/work-list-skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ResearchGraphPage() {
@@ -21,11 +22,13 @@ export default function ResearchGraphPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const load = useCallback(async (q = "") => {
     const res = await fetch(`/api/works?search=${encodeURIComponent(q)}`);
     const data = await res.json();
     if (Array.isArray(data)) setWorks(data);
+    setInitialLoading(false);
   }, []);
 
   useEffect(() => {
@@ -126,6 +129,10 @@ export default function ResearchGraphPage() {
       </PageToolbar>
 
       <ScrollArea className="flex-1 min-h-0">
+        {initialLoading ? (
+          <WorkListSkeleton />
+        ) : (
+        <>
         <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {works.map((work) => (
             <WorkCard
@@ -147,6 +154,8 @@ export default function ResearchGraphPage() {
               New Work
             </Button>
           </div>
+        )}
+        </>
         )}
       </ScrollArea>
 

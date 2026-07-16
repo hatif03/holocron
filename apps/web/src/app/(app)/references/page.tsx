@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { ReferenceCard, type ReferenceItem } from "@/components/references/ReferenceCard";
 import { AddReferenceModal } from "@/components/references/AddReferenceModal";
 import { PageToolbar } from "@/components/layout/page-toolbar";
+import { ReferenceListSkeleton } from "@/components/ui/reference-list-skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ReferencesPage() {
   const [refs, setRefs] = useState<ReferenceItem[]>([]);
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [editRef, setEditRef] = useState<
     (ReferenceItem & { bibtex?: string; doi?: string; notes?: string; url?: string }) | null
   >(null);
@@ -24,6 +26,7 @@ export default function ReferencesPage() {
     const res = await fetch(url);
     const data = await res.json();
     if (Array.isArray(data)) setRefs(data);
+    setInitialLoading(false);
   };
 
   useEffect(() => {
@@ -72,6 +75,9 @@ export default function ReferencesPage() {
       </PageToolbar>
 
       <ScrollArea className="flex-1 min-h-0">
+        {initialLoading ? (
+          <ReferenceListSkeleton />
+        ) : (
         <div className="space-y-2 p-3">
           {refs.map((ref) => (
             <ReferenceCard
@@ -90,6 +96,7 @@ export default function ReferencesPage() {
             </p>
           )}
         </div>
+        )}
       </ScrollArea>
 
       <AddReferenceModal

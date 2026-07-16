@@ -190,9 +190,15 @@ async def store_memory(
 
 async def search_work(work_id: str, query: str, limit: int = 5) -> str:
     """Supermemory: hybrid search — recall prior drafts and refs (docs/SUPERMEMORY.md)."""
+    hits = await search_work_hits(work_id, query, limit=limit)
+    return "\n".join(hits)
+
+
+async def search_work_hits(work_id: str, query: str, limit: int = 5) -> list[str]:
+    """Return individual memory strings from a work-scoped search."""
     client = get_client()
     if not client:
-        return ""
+        return []
 
     def _search():
         results = client.search.memories(
@@ -200,17 +206,17 @@ async def search_work(work_id: str, query: str, limit: int = 5) -> str:
             container_tag=_work_tag(work_id),
             search_mode="hybrid",
             limit=limit,
-            threshold=0.6,
+            threshold=0.4,
         )
         items = []
         for r in results.results:
             mem = getattr(r, "memory", None) or getattr(r, "chunk", None)
             if mem:
                 items.append(str(mem))
-        return "\n".join(items)
+        return items
 
     try:
         return await asyncio.to_thread(_search)
     except Exception as e:
         logger.debug("Supermemory search failed: %s", e)
-        return ""
+        return []

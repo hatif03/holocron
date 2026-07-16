@@ -20,7 +20,7 @@ from ..orchestrator.graph_context import (
 )
 from ..orchestrator.chart_generator import generate_charts_from_graph
 from ..orchestrator.graph_contract import GraphContract
-from ..supermemory_client import context_for_work, search_work, store_memory
+from ..supermemory_client import context_for_work, search_work, search_work_hits, store_memory
 
 EventCallback = Callable[[str, str, str, dict], Awaitable[None]]
 
@@ -31,6 +31,7 @@ class GenerateRequest(BaseModel):
     graph: dict[str, Any]
     config: dict[str, Any]
     title: str = "Research Paper"
+    library_bib: list[str] = []
 
 
 class GenerateResponse(BaseModel):
@@ -120,6 +121,9 @@ def _build_main_tex(title: str, venue_style: str, sections: list[str]) -> str:
         ]
         bib_style = "naturemag"
 
+    lines.append("\\lstset{breaklines=true,basicstyle=\\ttfamily\\small}")
+    lines.append("\\graphicspath{{figures/}}")
+
     for section in sections:
         safe = section.replace(" ", "_")
         lines.append(f"\\input{{sections/{safe}.tex}}")
@@ -155,21 +159,22 @@ async def _emit_memory(
     section: str = "",
     query: str = "",
     preview: str = "",
+    recalled_count: int = 0,
+    hits: list[str] | None = None,
 ):
-    await _emit(
-        on_event,
-        "Supermemory",
-        "memory",
-        message,
-        {
-            "action": action,
-            "section": section,
-            "containerTag": f"work_{work_id}",
-            "preview": preview[:500],
-            "query": query,
-            "phase": "planning" if action == "profile" else "body_sections",
-        },
-    )
+    meta: dict = {
+        "action": action,
+        "section": section,
+        "containerTag": f"work_{work_id}",
+        "preview": preview[:500],
+        "query": query,
+        "phase": "planning" if action == "profile" else "body_sections",
+    }
+    if recalled_count:
+        meta["recalledCount"] = recalled_count
+    if hits:
+        meta["hits"] = [h[:400] for h in hits[:3]]
+    await _emit(on_event, "Supermemory", "memory", message, meta)
 
 
 async def _write_section(
@@ -193,10 +198,22 @@ async def _write_section(
     max_reviews: int,
     sections_dir: Path,
     latex_blocks_by_section: dict[str, str],
+    prior_section_names: list[str] | None = None,
 ) -> tuple[str, int]:
     name = section.get("name", "Section")
     safe_name = name.replace(" ", "_")
     phase = "introduction" if name.lower() == "introduction" else "body_sections"
+    prior_names = prior_section_names or []
+
+    memory_ctx = await context_for_work(
+        req.work_id, query=f"{paper_title} {name}"
+    )
+    if memory_ctx:
+        await _emit_memory(
+            on_event, req.work_id, "profile",
+            f"Refreshed profile for {name}",
+            section=name, query=f"{paper_title} {name}", preview=memory_ctx[:500],
+        )
     target_words = _section_budget(section, total_sections, target_pages)
     paragraphs = int(section.get("paragraphs") or 3)
     outline = section.get("outline") or []
@@ -220,12 +237,25 @@ async def _write_section(
     )
 
     search_q = f"{name} {outline[0] if outline else paper_title}"
-    section_memory = await search_work(req.work_id, search_q, limit=3)
-    if section_memory:
+    section_hits = await search_work_hits(req.work_id, search_q, limit=3)
+    prior_hits: list[str] = []
+    if prior_names:
+        prior_q = f"prior draft {' '.join(prior_names[-4:])} {paper_title}"
+        prior_hits = await search_work_hits(req.work_id, prior_q, limit=3)
+        if prior_hits:
+            await _emit_memory(
+                on_event, req.work_id, "search",
+                f"Recalled {len(prior_hits)} prior section memories for {name}",
+                section=name, query=prior_q, preview="\n".join(prior_hits)[:500],
+                recalled_count=len(prior_hits), hits=prior_hits,
+            )
+    section_memory = "\n".join(section_hits + prior_hits)
+    if section_hits:
         await _emit_memory(
             on_event, req.work_id, "search",
-            f"Recalled memories for {name}",
+            f"Recalled {len(section_hits)} memories for {name}",
             section=name, query=search_q, preview=section_memory,
+            recalled_count=len(section_hits), hits=section_hits,
         )
 
     draft = await draft_section(
@@ -236,7 +266,8 @@ async def _write_section(
                 "plan": plan,
                 "title": paper_title,
                 "memory": memory_ctx,
-                "section_memory": section_memory,
+                "section_memory": "\n".join(section_hits),
+                "prior_sections_memory": "\n".join(prior_hits),
                 "discovered_refs": discovered_refs[:8],
                 "graph_node_ids": node_ids,
             },
@@ -256,15 +287,15 @@ async def _write_section(
 
     if enable_review:
         review_query = f"review feedback {name} {paper_title}"
-        review_memory = await search_work(
-            req.work_id, review_query, limit=3
-        )
-        if review_memory:
+        review_hits = await search_work_hits(req.work_id, review_query, limit=3)
+        review_memory = "\n".join(review_hits)
+        if review_hits:
             await _emit_memory(
                 on_event, req.work_id, "search",
-                f"Recalled {len(review_memory)} review memories for {name}",
+                f"Recalled {len(review_hits)} review memories for {name}",
                 section=name, query=review_query,
-                preview=review_memory[0][:300] if review_memory else "",
+                preview=review_hits[0][:300] if review_hits else "",
+                recalled_count=len(review_hits), hits=review_hits,
             )
         for i in range(max_reviews):
             await _emit(
@@ -279,8 +310,9 @@ async def _write_section(
                     style_guide=style,
                     context={
                         "graph_context": graph_ctx_dict,
+                        "memory": memory_ctx,
                         "prior_review_memory": review_memory,
-                        "discovered_refs": discovered_refs[:5],
+                        "discovered_refs": discovered_refs,
                     },
                     min_words=min_words,
                     graph_snippets=graph_snippets,
@@ -303,10 +335,45 @@ async def _write_section(
                 review.feedback or f"{name} needs revision",
                 {"phase": "review", "section": name, "approved": False},
             )
+            if review.feedback:
+                await store_memory(
+                    f"review feedback {name}: {review.feedback}",
+                    req.work_id,
+                    custom_id=f"gen_{gen_id}_{safe_name}_review_{i + 1}",
+                    metadata={
+                        "type": "review",
+                        "section": name,
+                        "generationId": gen_id,
+                        "workId": req.work_id,
+                    },
+                )
+            review_hits = await search_work_hits(
+                req.work_id, f"review feedback {name} {paper_title}", limit=3
+            )
+            review_memory = "\n".join(review_hits)
+            if review_hits:
+                await _emit_memory(
+                    on_event, req.work_id, "search",
+                    f"Recalled {len(review_hits)} review memories (round {i + 2})",
+                    section=name, query=review_query,
+                    preview=review_hits[0][:300],
+                    recalled_count=len(review_hits), hits=review_hits,
+                )
 
     if word_count < min_words and graph_snippets:
         content = _fallback_section_latex(name, graph_snippets, bib_keys, section_latex)
         word_count = len(content.split())
+
+    if section_latex and section_latex.strip() not in content:
+        content = content.rstrip() + "\n\n" + section_latex.strip() + "\n"
+        word_count = len(content.split())
+
+    section_lower = name.lower()
+    has_graph_content = bool(node_ids) or bool(graph_snippets)
+    if section_lower in ("related work", "results") and has_graph_content and word_count < 50:
+        raise ValueError(
+            f"Section {name} is empty or too short ({word_count} words) despite graph content — cannot continue."
+        )
 
     section_path = sections_dir / f"{safe_name}.tex"
     if word_count < 10:
@@ -359,10 +426,18 @@ async def run_generation(
     sections_dir = output_dir / "sections"
     sections_dir.mkdir(exist_ok=True)
 
-    copied_figures = copy_figure_assets(req.graph, str(output_dir), settings.storage_path)
+    copied_figures, figure_warnings = copy_figure_assets(req.graph, str(output_dir), settings.storage_path)
+    for warn in figure_warnings:
+        await _emit(on_event, "Commander", "feedback", warn, {"phase": "body_sections", "figure_warning": True})
     generated_figures = generate_charts_from_graph(
         req.graph, str(output_dir), settings.storage_path
     )
+    if generated_figures:
+        await _emit(
+            on_event, "Commander", "completed",
+            f"Generated {len(generated_figures)} chart(s) from data nodes",
+            {"phase": "body_sections", "generated_figures": [g["path"] for g in generated_figures]},
+        )
     latex_blocks_by_section = build_section_latex_blocks(
         graph_ctx, copied_figures, generated_figures, settings.storage_path
     )
@@ -398,6 +473,7 @@ async def run_generation(
                 work_id=req.work_id,
                 query=paper_title,
                 graph_context=graph_ctx_dict,
+                memory_context=memory_ctx or "",
             )
         )
         plan = plan_result.model_dump()
@@ -415,7 +491,7 @@ async def run_generation(
                 "search_query": plan_result.search_query,
                 "source": plan_result.search_source,
                 "count": len(discovered_refs),
-                "discovered_refs": discovered_refs[:5],
+                "discovered_refs": discovered_refs,
             },
         )
         await _emit(
@@ -481,8 +557,12 @@ async def run_generation(
         latex_blocks_by_section=latex_blocks_by_section,
     )
 
+    completed_sections: list[str] = []
     for section in sections:
-        name, word_count = await _write_section(section=section, **write_kwargs)
+        name, word_count = await _write_section(
+            section=section, prior_section_names=completed_sections, **write_kwargs
+        )
+        completed_sections.append(name)
         section_word_counts[name] = word_count
         section_files[name] = (sections_dir / f"{name.replace(' ', '_')}.tex").read_text(encoding="utf-8")
         total_words += word_count
@@ -517,7 +597,7 @@ async def run_generation(
             section_word_counts[name] = word_count
             section_files[name] = (sections_dir / f"{name.replace(' ', '_')}.tex").read_text(encoding="utf-8")
 
-    bib_content = build_bibtex_entries(discovered_refs, req.graph)
+    bib_content = build_bibtex_entries(discovered_refs, req.graph, req.library_bib)
     if not bib_content.strip():
         bib_content = "@article{placeholder2024, title={Placeholder Reference}, year={2024}}\n"
     (output_dir / "references.bib").write_text(bib_content, encoding="utf-8")

@@ -32,8 +32,7 @@ class PlanRequest(BaseModel):
 
     graph_context: dict[str, Any] | None = None
 
-
-
+    memory_context: str = ""
 
 
 class PlanResponse(BaseModel):
@@ -359,6 +358,11 @@ async def plan_paper(req: PlanRequest) -> PlanResponse:
     ]
     if flow:
         user_parts.append(f"Experiment flow (topological order): {flow}")
+
+    if req.memory_context:
+        user_parts.append(
+            f"Work and user profile from Supermemory (use for outline and tone):\n{req.memory_context}"
+        )
 
     if local_context:
 

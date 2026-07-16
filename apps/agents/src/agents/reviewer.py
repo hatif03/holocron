@@ -50,6 +50,19 @@ def _citation_coverage(content: str, required_keys: list[str]) -> float:
     return covered / len(required_keys)
 
 
+def _memory_prompt_blocks(context: dict[str, Any] | None) -> list[str]:
+    if not context:
+        return []
+    blocks: list[str] = []
+    memory = context.get("memory")
+    if memory:
+        blocks.append(f"Work/user memory:\n{memory}")
+    review_mem = context.get("prior_review_memory")
+    if review_mem:
+        blocks.append(f"Prior review feedback from memory:\n{review_mem}")
+    return blocks
+
+
 async def review_section(req: ReviewRequest) -> ReviewResponse:
     word_count = len(req.content.split())
     section_lower = req.section_name.lower()
@@ -61,9 +74,13 @@ async def review_section(req: ReviewRequest) -> ReviewResponse:
             f"{req.style_guide} style. Return JSON with approved=false, feedback explaining "
             f"what to expand, and revised_content with the expanded LaTeX."
         )
+        expand_user = expand_prompt + "\n\n" + req.content
+        mem_blocks = _memory_prompt_blocks(req.context)
+        if mem_blocks:
+            expand_user = "\n\n".join(mem_blocks) + "\n\n" + expand_user
         raw = await llm.complete(
             "You are the Reviewer agent. Return JSON: {approved, feedback, revised_content}",
-            expand_prompt + "\n\n" + req.content,
+            expand_user,
         )
         try:
             data = json.loads(raw)
@@ -89,6 +106,13 @@ async def review_section(req: ReviewRequest) -> ReviewResponse:
             revised_content=None,
         )
 
+    if section_lower in ("related work", "results") and has_contract_nodes and word_count < 50:
+        return ReviewResponse(
+            approved=False,
+            feedback=f"{req.section_name} is too short ({word_count} words) for the graph content assigned to this section.",
+            revised_content=None,
+        )
+
     if req.required_bib_keys and _citation_coverage(req.content, req.required_bib_keys) < 0.5:
         missing = [k for k in req.required_bib_keys if k not in req.content]
         return ReviewResponse(
@@ -111,6 +135,7 @@ async def review_section(req: ReviewRequest) -> ReviewResponse:
     ]
     if req.required_bib_keys:
         user_parts.append(f"Required citations: {', '.join(req.required_bib_keys[:12])}")
+    user_parts.extend(_memory_prompt_blocks(req.context))
     if req.context:
         user_parts.append(f"Context:\n{json.dumps(req.context)}")
     user_parts.append(req.content)

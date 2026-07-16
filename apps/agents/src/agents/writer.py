@@ -99,6 +99,15 @@ async def _generate_draft(
         )
     if req.figures:
         user_parts.append("Figures to include:\n" + "\n".join(req.figures))
+    memory = req.context.get("memory")
+    if memory:
+        user_parts.append(f"Work/user memory (recall — follow this guidance):\n{memory}")
+    section_memory = req.context.get("section_memory")
+    if section_memory:
+        user_parts.append(f"Recalled for this section:\n{section_memory}")
+    prior_memory = req.context.get("prior_sections_memory")
+    if prior_memory:
+        user_parts.append(f"Prior section drafts from Supermemory:\n{prior_memory}")
     user_parts.append(f"Full context:\n{json.dumps(req.context, indent=2)}")
     if expand and prior:
         user_parts.append(f"Prior draft to expand:\n{prior}")

@@ -10,7 +10,8 @@ const storageRoot = path.resolve(
   process.env.STORAGE_PATH || path.join(repoRoot, "storage")
 );
 
-if (!storageRoot.startsWith(repoRoot)) {
+const isCliData = Boolean(process.env.HOLOCRON_DATA);
+if (!isCliData && !storageRoot.startsWith(repoRoot)) {
   console.error("STORAGE_PATH must be inside the repository for local dev.");
   process.exit(1);
 }
@@ -19,6 +20,7 @@ const dirs = [
   storageRoot,
   path.join(storageRoot, "works"),
   path.join(storageRoot, "generations"),
+  path.join(storageRoot, "references"),
   path.join(storageRoot, "uploads"),
   path.join(storageRoot, ".meta"),
 ];

@@ -86,6 +86,19 @@ async function checkSupermemoryOnline(baseUrl, apiKey) {
   return false;
 }
 
+async function validateApiKey(baseUrl, apiKey) {
+  if (!apiKey) return false;
+  try {
+    const res = await fetch(`${baseUrl}/v3/settings`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    return res.status !== 401 && res.status !== 403;
+  } catch {
+    return false;
+  }
+}
+
 async function configureSettings(baseUrl, apiKey) {
   try {
     const res = await fetch(`${baseUrl}/v3/settings`, {
@@ -273,6 +286,16 @@ export async function bootstrapSupermemory(opts = {}) {
   }
 
   const baseUrl = "http://localhost:6767";
+  if (!(await validateApiKey(baseUrl, apiKey))) {
+    console.warn("Stored Supermemory API key rejected — refreshing from container logs...");
+    const fresh = await waitForKey(containerName);
+    if (fresh) {
+      apiKey = fresh;
+      appendKeyToEnv(envPath, apiKey);
+      console.log(`Refreshed SUPERMEMORY_API_KEY in ${envPath}`);
+    }
+  }
+
   const online = await checkSupermemoryOnline(baseUrl, apiKey);
   if (!online) {
     console.warn("Supermemory API not responding yet");

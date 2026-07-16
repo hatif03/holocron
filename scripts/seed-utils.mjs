@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { spawnSync } from "child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -232,6 +233,185 @@ export function writeOwidLifeExpHistogramSvg(destPath) {
 </svg>`;
   fs.mkdirSync(path.dirname(destPath), { recursive: true });
   fs.writeFileSync(destPath, svg, "utf8");
+}
+
+function writeMatplotlibPng(destPath, pythonBody) {
+  const script = `
+import matplotlib
+matplotlib.use('Agg')
+${pythonBody}
+`;
+  const r = spawnSync("python", ["-c", script], {
+    encoding: "utf8",
+    timeout: 60_000,
+  });
+  if (r.status !== 0) {
+    throw new Error(r.stderr || r.stdout || "matplotlib PNG export failed");
+  }
+}
+
+export function writeOwidEmissionsBarPng(destPath) {
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  const labels = ["USA", "China", "India", "Germany", "Brazil", "UK", "Japan"];
+  const values = [14.9, 8.2, 2.0, 8.1, 2.2, 5.2, 8.5];
+  writeMatplotlibPng(
+    destPath,
+    `
+labels = ${JSON.stringify(labels)}
+values = ${JSON.stringify(values)}
+import matplotlib.pyplot as plt
+plt.figure(figsize=(6.5, 3.5))
+plt.bar(labels, values, color="#dc2626")
+plt.title("CO₂ emissions per capita (2023, t)")
+plt.xticks(rotation=45, ha="right")
+plt.tight_layout()
+plt.savefig(${JSON.stringify(destPath.replace(/\\/g, "/"))}, dpi=120)
+plt.close()
+`
+  );
+}
+
+export function writeOwidLifeExpHistogramPng(destPath) {
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  writeMatplotlibPng(
+    destPath,
+    `
+import matplotlib.pyplot as plt
+bins = [50, 55, 60, 65, 70, 75, 80, 85]
+counts = [2, 5, 12, 28, 45, 38, 22, 8]
+plt.figure(figsize=(6.5, 3.5))
+plt.bar(bins, counts, width=4, color="#0ea5e9", align="edge")
+plt.title("Life expectancy distribution (countries, 2023)")
+plt.xlabel("Life expectancy (years)")
+plt.tight_layout()
+plt.savefig(${JSON.stringify(destPath.replace(/\\/g, "/"))}, dpi=120)
+plt.close()
+`
+  );
+}
+
+export function writeRenewablesBarPng(destPath) {
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  const labels = ["Norway", "Brazil", "Germany", "China", "USA", "India", "Australia"];
+  const values = [98, 89, 46, 31, 22, 21, 32];
+  writeMatplotlibPng(
+    destPath,
+    `
+labels = ${JSON.stringify(labels)}
+values = ${JSON.stringify(values)}
+import matplotlib.pyplot as plt
+plt.figure(figsize=(6.5, 3.5))
+plt.bar(labels, values, color="#16a34a")
+plt.title("Renewable electricity share (2023, %)")
+plt.xticks(rotation=45, ha="right")
+plt.tight_layout()
+plt.savefig(${JSON.stringify(destPath.replace(/\\/g, "/"))}, dpi=120)
+plt.close()
+`
+  );
+}
+
+export function writeFossilShareHistogramPng(destPath) {
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  writeMatplotlibPng(
+    destPath,
+    `
+import matplotlib.pyplot as plt
+bins = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+counts = [8, 14, 22, 35, 48, 42, 30, 18, 6]
+plt.figure(figsize=(6.5, 3.5))
+plt.bar(bins, counts, width=8, color="#ca8a04", align="edge")
+plt.title("Fossil fuel share of primary energy (countries, 2023)")
+plt.xlabel("Fossil share (%)")
+plt.tight_layout()
+plt.savefig(${JSON.stringify(destPath.replace(/\\/g, "/"))}, dpi=120)
+plt.close()
+`
+  );
+}
+
+/** Sample OWID panel: renewable share vs fossil fuel dependence. */
+export function sampleRenewablesPanel(renewCsvText, fossilCsvText) {
+  const countries = new Set([
+    "United States",
+    "China",
+    "India",
+    "Germany",
+    "Brazil",
+    "United Kingdom",
+    "Japan",
+    "France",
+    "Norway",
+    "Australia",
+  ]);
+  const years = new Set();
+  for (let y = 2000; y <= 2023; y++) years.add(String(y));
+
+  function parseLongCsv(text, valueHints) {
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const header = lines[0].split(",");
+    const entityIdx = header.indexOf("Entity");
+    const yearIdx = header.indexOf("Year");
+    const valIdx = header.findIndex((h) =>
+      valueHints.some((hint) => h.toLowerCase().includes(hint))
+    );
+    const map = new Map();
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(",");
+      const entity = cols[entityIdx];
+      const year = cols[yearIdx];
+      if (!countries.has(entity) || !years.has(year)) continue;
+      const val = cols[valIdx];
+      if (!map.has(entity)) map.set(entity, {});
+      map.get(entity)[year] = val;
+    }
+    return map;
+  }
+
+  const renew = parseLongCsv(renewCsvText, ["renewable", "share"]);
+  const fossil = parseLongCsv(fossilCsvText, ["fossil", "primary"]);
+  const rows = ["Entity,Year,renewable_share,fossil_share"];
+  for (const c of countries) {
+    for (const y of years) {
+      const rv = renew.get(c)?.[y] ?? "";
+      const fv = fossil.get(c)?.[y] ?? "";
+      if (rv || fv) rows.push(`${c},${y},${rv},${fv}`);
+    }
+  }
+  return rows.join("\n");
+}
+
+export async function seedRecallMemories(workId, userId, memories) {
+  const smUrl = process.env.SUPERMEMORY_API_URL || "http://localhost:6767";
+  const smKey = process.env.SUPERMEMORY_API_KEY || "";
+  if (!smKey) {
+    console.warn("SUPERMEMORY_API_KEY not set — skipping recall memory seed");
+    return 0;
+  }
+  let count = 0;
+  for (const mem of memories) {
+    const containerTag = mem.containerTag || `work_${workId}`;
+    try {
+      const res = await fetch(`${smUrl}/v3/documents`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${smKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: mem.content,
+          containerTag,
+          customId: mem.customId,
+          metadata: { ...mem.metadata, workId, userId },
+        }),
+      });
+      if (res.ok) count += 1;
+      else console.warn(`Supermemory seed failed (${mem.customId}): HTTP ${res.status}`);
+    } catch (e) {
+      console.warn(`Supermemory seed failed (${mem.customId}):`, e.message);
+    }
+  }
+  return count;
 }
 
 export async function downloadOwidCsv(slug, destPath) {

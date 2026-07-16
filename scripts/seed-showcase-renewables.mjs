@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 /**
- * Seed OWID climate-health showcase work demonstrating all Holocron capabilities.
- * Usage: node scripts/seed-showcase-owid.mjs [--force]
+ * Seed renewable energy showcase work with pre-seeded Supermemory recalls for demo.
+ *
+ * Demo flow:
+ * 1. npm run seed:showcase:renewables
+ * 2. Open work → Memory tab shows pre-seeded hits
+ * 3. Generate paper → Process Log + Memory trace show profile/search/store timeline
+ * 4. Generate again → Introduction/Methods recall prior section drafts
+ *
+ * Usage: node scripts/seed-showcase-renewables.mjs [--force]
  */
 import postgres from "postgres";
 import fs from "fs";
@@ -13,13 +20,14 @@ import {
   ingestGraphMemory,
   syncWorkReferences,
   downloadOwidCsv,
-  sampleOwidPanel,
-  writeOwidEmissionsBarPng,
-  writeOwidLifeExpHistogramPng,
+  sampleRenewablesPanel,
+  writeRenewablesBarPng,
+  writeFossilShareHistogramPng,
+  seedRecallMemories,
 } from "./seed-utils.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const OWID_DIR = path.join(ASSETS_DIR, "owid");
+const DATA_DIR = path.join(ASSETS_DIR, "renewables");
 const DATABASE_URL =
   process.env.DATABASE_URL ||
   "postgresql://holocron:holocron@localhost:5432/holocron";
@@ -27,7 +35,7 @@ const LOCAL_USER = "00000000-0000-0000-0000-000000000001";
 const force = process.argv.includes("--force");
 
 const TITLE =
-  "Global CO₂ Emissions and Life Expectancy: A Cross-Country Analysis (1990–2023)";
+  "Renewable Electricity Share and Fossil Fuel Dependence: A Global Energy Transition Analysis (2000–2023)";
 
 const NODES = [
   {
@@ -39,21 +47,21 @@ const NODES = [
     data: {
       status: "complete",
       paper_title: TITLE,
-      keywords: "CO2 emissions, life expectancy, climate health, OWID",
-      target_venue: "Nature Climate Change",
+      keywords: "renewable energy, fossil fuels, energy transition, OWID",
+      target_venue: "Nature Energy",
       deadline: "2026-12-01",
     },
   },
   {
     key: "idea_1",
     type: "idea",
-    label: "Climate-Health Link",
+    label: "Energy Transition",
     x: 260,
     y: 80,
     data: {
       status: "complete",
-      body: "Rising per-capita CO₂ emissions may correlate with divergent population health trajectories across countries when socioeconomic confounders are accounted for.",
-      source_note: "Our World in Data — cross-country panel 1990–2023.",
+      body: "Countries diverge in renewable electricity adoption while fossil fuel dependence persists in transport and industry.",
+      source_note: "Our World in Data — energy mix indicators 2000–2023.",
     },
   },
   {
@@ -64,8 +72,8 @@ const NODES = [
     y: 220,
     data: {
       status: "complete",
-      body: "How strongly is per-capita CO₂ associated with national life expectancy after 1990, and does the relationship differ across income groups?",
-      context: "Observational cross-country study using OWID harmonized indicators.",
+      body: "How does renewable electricity share covary with fossil fuel dependence across countries since 2000?",
+      context: "Cross-country panel using OWID harmonized energy indicators.",
     },
   },
   {
@@ -76,74 +84,74 @@ const NODES = [
     y: 360,
     data: {
       status: "complete",
-      body: "Countries with higher recent CO₂ per capita exhibit lower life expectancy when controlling for decade-fixed effects in a pooled panel.",
-      rationale: "Industrialization and air-quality pathways.",
+      body: "Higher renewable electricity share associates with lower fossil primary energy share in the sampled panel.",
+      rationale: "Electrification and grid decarbonization pathways.",
     },
   },
   {
     key: "literature_1",
     type: "literature",
-    label: "OWID Methodology",
+    label: "OWID Energy Data",
     x: 260,
     y: 500,
     data: {
       status: "complete",
-      user_notes: "Our World in Data CO₂ and life expectancy datasets with documented provenance.",
+      user_notes: "OWID renewable electricity and fossil fuel share datasets.",
       bibtex:
-        "@misc{owidco2, title={CO2 and Greenhouse Gas Emissions}, author={Our World in Data}, year={2024}, howpublished={\\url{https://ourworldindata.org/co2-and-greenhouse-gas-emissions}}}",
+        "@misc{owidenergy, title={Energy}, author={Our World in Data}, year={2024}, howpublished={\\url{https://ourworldindata.org/energy}}}",
       file_path: "",
     },
   },
   {
     key: "concept_1",
     type: "concept",
-    label: "Environmental Epidemiology",
+    label: "Energy Transition",
     x: 500,
     y: 120,
     data: {
       status: "complete",
       definition:
-        "Study of how environmental exposures—including greenhouse gas intensive development—relate to population health outcomes at scale.",
-      related_terms: "life expectancy, air pollution, development",
+        "Shift from fossil-dominated primary energy toward low-carbon electricity and end-use electrification.",
+      related_terms: "renewables, fossil share, grid decarbonization",
     },
   },
   {
     key: "method_1",
     type: "method",
-    label: "Panel Analysis",
+    label: "Panel Correlation",
     x: 500,
     y: 280,
     data: {
       status: "complete",
       description:
-        "Merge OWID CO₂ per capita and life expectancy panels; compute Pearson correlation and decade-stratified means.",
-      pseudo_code: `import pandas as pd\nimport numpy as np\nfrom scipy.stats import pearsonr\n\ndf = pd.read_csv("owid_climate_health_panel.csv")\ndf = df.dropna(subset=["co2_per_capita", "life_expectancy"])\nr, p = pearsonr(df["co2_per_capita"], df["life_expectancy"])\nprint(f"r={r:.3f}, p={p:.4f}")`,
+        "Merge OWID renewable share and fossil share panels; compute Pearson correlation and regional means.",
+      pseudo_code: `import pandas as pd\nfrom scipy.stats import pearsonr\n\ndf = pd.read_csv("renewables_fossil_panel.csv")\ndf = df.dropna(subset=["renewable_share", "fossil_share"])\nr, p = pearsonr(df["renewable_share"], df["fossil_share"])\nprint(f"r={r:.3f}, p={p:.4f}")`,
       environment: "Python 3.12, pandas, scipy, matplotlib",
     },
   },
   {
     key: "data_1",
     type: "data",
-    label: "OWID Panel CSV",
+    label: "Energy Panel CSV",
     x: 500,
     y: 440,
     data: {
       status: "complete",
-      description: "Sampled 10-country panel: CO₂ per capita and life expectancy, 1990–2023.",
+      description: "10-country panel: renewable electricity share and fossil primary energy share.",
       file_path: "",
     },
   },
   {
     key: "experiment_1",
     type: "experiment",
-    label: "Correlation Study",
+    label: "Transition Study",
     x: 740,
     y: 200,
     data: {
       status: "complete",
-      name: "Cross-country correlation",
+      name: "Renewables vs fossil correlation",
       environment: "Holocron agents + local LaTeX",
-      user_notes: "Upload CSV, generate bar chart and histogram in paper pipeline.",
+      user_notes: "Generate bar chart and histogram from panel CSV.",
     },
   },
   {
@@ -157,7 +165,7 @@ const NODES = [
       name: "Pearson correlation",
       formula: "r = \\frac{\\sum_{i}(x_i - \\bar{x})(y_i - \\bar{y})}{\\sqrt{\\sum_{i}(x_i - \\bar{x})^2}\\sqrt{\\sum_{i}(y_i - \\bar{y})^2}}",
       unit: "dimensionless",
-      target_value: "-0.35",
+      target_value: "-0.55",
     },
   },
   {
@@ -168,8 +176,8 @@ const NODES = [
     y: 200,
     data: {
       status: "complete",
-      value: "Negative correlation between CO₂ per capita and life expectancy across the sampled panel (r ≈ -0.4).",
-      significance: "p < 0.01 for pooled 1990–2023 observations.",
+      value: "Negative correlation between renewable share and fossil dependence (r ≈ -0.5).",
+      significance: "p < 0.01 for pooled 2000–2023 observations.",
     },
   },
   {
@@ -180,31 +188,30 @@ const NODES = [
     y: 360,
     data: {
       status: "complete",
-      body: "High-emitting economies in the sample do not uniformly exhibit higher life expectancy; health outcomes cluster by region and income group.",
+      body: "Leaders in renewable electricity (e.g. Norway, Brazil) cluster at lower fossil shares; coal-heavy economies lag.",
     },
   },
   {
     key: "figure_1",
     type: "figure",
-    label: "Emissions Bar Chart",
+    label: "Renewables Bar Chart",
     x: 980,
     y: 520,
     data: {
       status: "complete",
-      caption: "Per-capita CO₂ emissions for selected countries (2023, tonnes).",
+      caption: "Renewable electricity share for selected countries (2023, %).",
       figure_path: "",
-      script_source: "# matplotlib bar chart generated at paper compile time from data_1 CSV",
     },
   },
   {
     key: "figure_2",
     type: "figure",
-    label: "Life Exp Distribution",
+    label: "Fossil Share Distribution",
     x: 980,
     y: 660,
     data: {
       status: "complete",
-      caption: "Frequency distribution of national life expectancy (2023).",
+      caption: "Distribution of fossil fuel share of primary energy (2023).",
       figure_path: "",
     },
   },
@@ -216,8 +223,8 @@ const NODES = [
     y: 360,
     data: {
       status: "complete",
-      caption: "Sample panel: mean CO₂ and life expectancy by country (2023).",
-      columns: "Country, CO2 per capita, Life expectancy",
+      caption: "Sample panel: mean renewable and fossil shares by country (2023).",
+      columns: "Country, Renewable share, Fossil share",
       rows: "",
       data_path: "",
     },
@@ -230,7 +237,7 @@ const NODES = [
     y: 360,
     data: {
       status: "complete",
-      notes: "Showcase work: CSV upload, chart figures, tables, equations, code in generated paper.",
+      notes: "Showcase: Supermemory recall demo — pre-seeded drafts and preferences.",
     },
   },
 ];
@@ -253,45 +260,88 @@ const EDGES = [
   ["table_1", "end_1"],
 ];
 
-async function ensureOwidAssets() {
-  fs.mkdirSync(OWID_DIR, { recursive: true });
-  const co2Path = path.join(OWID_DIR, "co2-emissions-per-capita.csv");
-  const lifePath = path.join(OWID_DIR, "life-expectancy.csv");
-  const panelPath = path.join(OWID_DIR, "owid_climate_health_panel.csv");
+async function ensureAssets() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const renewPath = path.join(DATA_DIR, "renewable-electricity-share.csv");
+  const fossilPath = path.join(DATA_DIR, "fossil-fuel-primary-energy.csv");
+  const panelPath = path.join(DATA_DIR, "renewables_fossil_panel.csv");
 
-  if (!fs.existsSync(co2Path)) {
-    console.log("Downloading OWID CO₂ emissions CSV…");
-    await downloadOwidCsv("co-emissions-per-capita", co2Path);
+  if (!fs.existsSync(renewPath)) {
+    console.log("Downloading OWID renewable electricity share CSV…");
+    await downloadOwidCsv("share-electricity-renewables", renewPath);
   }
-  if (!fs.existsSync(lifePath)) {
-    console.log("Downloading OWID life expectancy CSV…");
-    await downloadOwidCsv("life-expectancy", lifePath);
+  if (!fs.existsSync(fossilPath)) {
+    console.log("Downloading OWID fossil fuel share CSV…");
+    await downloadOwidCsv("fossil-fuels-share-energy", fossilPath);
   }
 
-  const co2Text = fs.readFileSync(co2Path, "utf8");
-  const lifeText = fs.readFileSync(lifePath, "utf8");
-  const panel = sampleOwidPanel(co2Text, lifeText);
+  const renewText = fs.readFileSync(renewPath, "utf8");
+  const fossilText = fs.readFileSync(fossilPath, "utf8");
+  const panel = sampleRenewablesPanel(renewText, fossilText);
   fs.writeFileSync(panelPath, panel, "utf8");
 
-  writeOwidEmissionsBarPng(path.join(OWID_DIR, "owid_emissions_bar.png"));
-  writeOwidLifeExpHistogramPng(path.join(OWID_DIR, "owid_life_exp_histogram.png"));
+  writeRenewablesBarPng(path.join(DATA_DIR, "renewables_bar.png"));
+  writeFossilShareHistogramPng(path.join(DATA_DIR, "fossil_share_histogram.png"));
 
   return {
     panelPath,
-    panelName: "owid_climate_health_panel.csv",
-    barChart: "owid_emissions_bar.png",
-    histChart: "owid_life_exp_histogram.png",
+    panelName: "renewables_fossil_panel.csv",
+    barChart: "renewables_bar.png",
+    histChart: "fossil_share_histogram.png",
   };
 }
 
 function copyToWork(workId, srcFile, destName) {
-  const src = path.isAbsolute(srcFile) ? srcFile : path.join(OWID_DIR, srcFile);
+  const src = path.isAbsolute(srcFile) ? srcFile : path.join(DATA_DIR, srcFile);
   const destDir = path.join(STORAGE_PATH, "works", workId);
   fs.mkdirSync(destDir, { recursive: true });
   const dest = path.join(destDir, destName);
   fs.copyFileSync(src, dest);
   const rel = `works/${workId}/${destName}`;
   return { path: rel, url: `/api/works/files?path=${encodeURIComponent(rel)}` };
+}
+
+async function seedDemoMemories(workId) {
+  const memories = [
+    {
+      customId: `work_${workId}_intro_draft`,
+      content: `Introduction draft (prior run): Energy transition analysis linking renewable electricity adoption to declining fossil dependence across OECD and emerging economies since 2000.`,
+      metadata: { type: "writer", section: "Introduction" },
+    },
+    {
+      customId: `work_${workId}_vlm_layout`,
+      content: `VLM layout note: Use single-column width for bar charts comparing country renewable shares; avoid two-column figure placement for histograms.`,
+      metadata: { type: "vlm_review", section: "Results" },
+    },
+    {
+      customId: `work_${workId}_graph_summary`,
+      content: `Graph summary: Hypothesis — higher renewable electricity share associates with lower fossil primary energy share. Key metric: Pearson r ≈ -0.55 on 2000–2023 panel.`,
+      metadata: { type: "graph_summary" },
+    },
+    {
+      customId: `work_${workId}_paper_1`,
+      content: `Discovered paper: IEA World Energy Outlook 2024 — global renewable capacity growth and fossil phase-out scenarios.`,
+      metadata: { type: "discovered_paper" },
+    },
+    {
+      customId: `work_${workId}_paper_2`,
+      content: `Discovered paper: IPCC AR6 WGIII — mitigation pathways emphasizing electricity sector decarbonization.`,
+      metadata: { type: "discovered_paper" },
+    },
+    {
+      customId: `work_${workId}_paper_3`,
+      content: `Discovered paper: Bogdanov et al. (2019) — low-cost renewable electricity systems in 145 countries.`,
+      metadata: { type: "discovered_paper" },
+    },
+    {
+      customId: `user_${LOCAL_USER}_pref`,
+      containerTag: `user_${LOCAL_USER}`,
+      content: `User preference: Concise Methods section, Nature-style figure captions, emphasize policy implications in Discussion.`,
+      metadata: { type: "user_preference" },
+    },
+  ];
+  const n = await seedRecallMemories(workId, LOCAL_USER, memories);
+  console.log(`Seeded ${n} Supermemory recall documents.`);
 }
 
 async function main() {
@@ -310,13 +360,13 @@ async function main() {
     console.log("Removed existing showcase work.");
   }
 
-  const assets = await ensureOwidAssets();
+  const assets = await ensureAssets();
 
   const [work] = await sql`
     INSERT INTO research_works (title, description, user_id, is_template)
     VALUES (
       ${TITLE},
-      ${"Holocron capability showcase: OWID data uploads, charts, tables, equations, and code in paper generation."},
+      ${"Supermemory recall demo: renewable energy transition graph with pre-seeded memories."},
       ${LOCAL_USER}::uuid,
       false
     )
@@ -385,9 +435,10 @@ async function main() {
     finalNodes.map((r) => ({ data: r.data }))
   );
   await ingestGraphMemory(workId, TITLE, NODES.length, EDGES.length);
+  await seedDemoMemories(workId);
 
   await sql.end();
-  console.log(`Seeded OWID showcase: ${TITLE}`);
+  console.log(`Seeded renewables showcase: ${TITLE}`);
   console.log(`Work ID: ${workId}`);
   console.log(`Open: http://localhost:3000/research-graph/${workId}`);
 }

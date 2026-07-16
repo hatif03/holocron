@@ -78,8 +78,9 @@ export function ProcessLogPanel({
   const terminal = isTerminalStatus(generationStatus);
 
   return (
-    <Card className="p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-      <h2 className="font-medium text-sm mb-3">Process Log</h2>
+    <Card className="flex min-h-[200px] flex-col overflow-hidden p-4 lg:min-h-[420px] lg:flex-1">
+      <h2 className="font-medium text-sm mb-3 shrink-0">Process Log</h2>
+      <div className="min-h-0 flex-1 overflow-y-auto">
 
       {events.length === 0 && isRunning && (
         <div className="flex items-center gap-3 py-4">
@@ -163,6 +164,7 @@ export function ProcessLogPanel({
           </div>
         );
       })}
+      </div>
     </Card>
   );
 }

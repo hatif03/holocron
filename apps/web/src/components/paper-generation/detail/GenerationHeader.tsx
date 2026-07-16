@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, ExternalLink } from "lucide-react";
+import { Download, ExternalLink, BookOpen } from "lucide-react";
 import { BackLink } from "@/components/layout/back-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,10 @@ interface GenerationHeaderProps {
   gen: Record<string, unknown>;
   genId: string;
   onCancel?: () => void;
+  onViewCitations?: () => void;
 }
 
-export function GenerationHeader({ gen, genId, onCancel }: GenerationHeaderProps) {
+export function GenerationHeader({ gen, genId, onCancel, onViewCitations }: GenerationHeaderProps) {
   const status = String(gen.status || "pending");
   const isRunning = status === "running" || status === "pending";
   const isCompleted = status.includes("completed");
@@ -46,6 +47,12 @@ export function GenerationHeader({ gen, genId, onCancel }: GenerationHeaderProps
         </div>
       </div>
       <div className="flex gap-2 shrink-0">
+        {onViewCitations && (
+          <Button variant="outline" size="sm" onClick={onViewCitations} className="gap-1.5">
+            <BookOpen className="h-4 w-4" />
+            Citations
+          </Button>
+        )}
         {isRunning && onCancel && (
           <Button variant="outline" className="text-red-600 border-red-200" onClick={onCancel}>
             Cancel

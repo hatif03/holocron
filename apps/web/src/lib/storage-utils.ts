@@ -25,14 +25,13 @@ export function generationPdfRelPath(genId: string, pdfPath?: string | null): st
 
 export function generationFileUrl(genId: string, relFile: string): string {
   const normalized = relFile.replace(/\\/g, "/").replace(/^\.\//, "");
-  const rel = normalized.startsWith("generations/")
-    ? normalized
-    : `generations/${genId}/${normalized}`;
-  return `/api/works/files?path=${encodeURIComponent(rel)}`;
+  return `/api/generations/${genId}/files?path=${encodeURIComponent(normalized)}`;
 }
 
 export function generationFilesUrl(genId: string, pdfPath?: string | null): string | null {
+  if (!pdfPath) return `/api/generations/${genId}/files?path=${encodeURIComponent("main.pdf")}`;
   const rel = generationPdfRelPath(genId, pdfPath);
   if (!rel) return null;
-  return `/api/works/files?path=${encodeURIComponent(rel)}`;
+  const fileName = rel.replace(/^generations\/[^/]+\//, "");
+  return `/api/generations/${genId}/files?path=${encodeURIComponent(fileName)}`;
 }

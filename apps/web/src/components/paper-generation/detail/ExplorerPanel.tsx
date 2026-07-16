@@ -29,6 +29,7 @@ function fileIconChar(name: string): string {
   if (name.endsWith(".pdf")) return "P";
   if (name.endsWith(".bib")) return "B";
   if (name.endsWith(".tex")) return "T";
+  if (/\.(png|jpg|jpeg|svg|gif)$/i.test(name)) return "I";
   return "F";
 }
 
@@ -97,8 +98,8 @@ export function ExplorerPanel({ fileTree, selectedPath, onSelectFile }: Explorer
   const fileCount = fileTree.reduce((acc, n) => acc + (n.children?.length || (n.type === "file" ? 1 : 0)), 0);
 
   return (
-    <Card className="p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-      <div className="flex items-center justify-between mb-3">
+    <Card className="flex min-h-[200px] flex-col overflow-hidden p-4 lg:min-h-[420px] lg:flex-1">
+      <div className="flex items-center justify-between mb-3 shrink-0">
         <h2 className="font-semibold text-sm flex items-center gap-2">
           <FileText className="h-4 w-4" />
           Explorer
@@ -115,7 +116,7 @@ export function ExplorerPanel({ fileTree, selectedPath, onSelectFile }: Explorer
           Review
         </label>
       </div>
-      <div className={cn(reviewMode && "opacity-90")}>
+      <div className={cn("min-h-0 flex-1 overflow-y-auto", reviewMode && "opacity-90")}>
         {fileTree.map((node) => (
           <TreeNode
             key={node.path}

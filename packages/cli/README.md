@@ -1,4 +1,4 @@
-# holocron-research CLI v1.0.4
+# holocron-research CLI v1.0.5
 
 npm package published as **`holocron-research`**. One-command local deployment for the Holocron research platform.
 
@@ -31,6 +31,13 @@ Marketing site: [holocron.vercel.app/install](https://holocron.vercel.app/instal
 
 First `start` downloads ~2–4 GB of Docker images and runs DB migrations automatically.
 
+## What's new in v1.0.5
+
+- **Supermemory search fix** — `dreaming: instant` on all writes; indexing wait; search recalls visible in Memory trace
+- **Paper detail UX** — independent panel scroll; icon-only back button; loading skeletons
+- **Typography** — Plus Jakarta Sans (UI) + Instrument Serif (logo) via Google Fonts
+- **Demo scripts** — [docs/DEMO_NARRATION.md](../../docs/DEMO_NARRATION.md) voiceover for recording
+
 ## What's new in v1.0.4
 
 - **Supermemory reads** — planner, writer, and reviewer use explicit recall prompts; review feedback stored for later rounds; second-run draft recall
@@ -50,14 +57,14 @@ See [docs/CITE_SMART_BORROW.md](https://github.com/hatif03/holocron/blob/main/do
 
 ## Release
 
-Tag `v1.0.4` (or later) triggers [`.github/workflows/release.yml`](../../.github/workflows/release.yml):
+Tag `v1.0.5` (or later) triggers [`.github/workflows/release.yml`](../../.github/workflows/release.yml):
 
 - Builds and pushes GHCR images (`holocron-web`, `holocron-agents`, `holocron-latex`, `holocron-supermemory`)
 - Publishes `holocron-research@<version>` to npm (requires `NPM_TOKEN` secret)
 
 ```bash
-git tag v1.0.4
-git push origin v1.0.4
+git tag v1.0.5
+git push origin v1.0.5
 ```
 
 See [../../README.md](../../README.md) for full documentation.

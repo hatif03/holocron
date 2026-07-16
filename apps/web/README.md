@@ -29,7 +29,9 @@ npm run dev --workspace=web
 - **Zustand** — canvas state (`src/lib/canvas-store.ts`)
 - **postgres** — direct SQL (no ORM)
 
-Fonts: **Inter** (UI), **JetBrains Mono** (logs, code, BibTeX), and **Newsreader** (editorial home only) via `next/font/google`.
+Fonts ([Google Fonts](https://fonts.google.com/)): **Plus Jakarta Sans** (UI), **Instrument Serif** (logo wordmark), **JetBrains Mono** (logs, code, BibTeX) via `next/font/google`.
+
+Paper detail layout: fixed header + memory trace; **Process Log**, **Explorer**, and **Detail/PDF** panels scroll independently. Loading skeletons on list and detail pages.
 
 ## Structure
 

@@ -90,6 +90,7 @@ services:
       - ../apps/web:/app/apps/web
       - ../packages:/app/packages
       - ../storage:/data/storage
+      - web_next_cache:/app/apps/web/.next
     depends_on:
       postgres:
         condition: service_healthy
@@ -126,3 +127,4 @@ volumes:
   postgres_data:
   storage_data:
   supermemory_data:
+  web_next_cache:

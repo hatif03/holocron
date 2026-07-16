@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   NODE_CATEGORIES,
-  NODE_TYPES,
   NODE_ICONS,
   getDefaultNodeData,
   getNodeTypeLabel,

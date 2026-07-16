@@ -98,6 +98,12 @@ async function main() {
     shell: process.platform === "win32",
   });
 
+  const nextCache = path.join(repoRoot, "apps", "web", ".next");
+  if (fs.existsSync(nextCache)) {
+    fs.rmSync(nextCache, { recursive: true, force: true });
+    console.log("Cleared apps/web/.next (prevents dev/build cache conflicts)");
+  }
+
   console.log("\nStarting Supermemory first...");
   const smOk = await ensureSupermemoryHealthy(composeFile, { build: true });
   if (!smOk) {

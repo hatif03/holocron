@@ -12,8 +12,13 @@ export async function GET(req: NextRequest) {
     const db = getDb();
 
     if (shouldSyncGenerationsFromStorage()) {
-      await syncGenerationsFromStorage(db);
-      markSyncGenerationsDone();
+      try {
+        await syncGenerationsFromStorage(db);
+      } catch (syncErr) {
+        console.error("syncGenerationsFromStorage failed:", syncErr);
+      } finally {
+        markSyncGenerationsDone();
+      }
     }
 
     const pattern = search ? `%${search}%` : null;

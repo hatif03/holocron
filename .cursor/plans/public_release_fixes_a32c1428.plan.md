@@ -4,19 +4,19 @@ overview: Fix the dev stack 500 error, LaTeX formatting in the generation pipeli
 todos:
   - id: fix-next-cache
     content: "Fix API 500: clear .next in start-local, add web_next_cache volume in docker-compose, harden generations route sync"
-    status: pending
+    status: completed
   - id: latex-formatting
     content: "Fix LaTeX: abstract block in writer.py, remove graphicspath doubling, extra compile pass, table escaping"
-    status: pending
+    status: completed
   - id: showcase-cleanup
     content: Cleanup stale gens (--keep renewables 4d9df851), seed:recall:demo, regenerate OWID, fix verify-showcase selection
-    status: pending
+    status: completed
   - id: verify-actions
     content: Fix CI lint if needed, confirm GitHub Actions green, optional v1.0.6 tag if code ships
-    status: pending
+    status: in_progress
   - id: docs-public
     content: Update DEMO.md, DEMO_NARRATION.md, README with final URLs and public install verification steps
-    status: pending
+    status: in_progress
 isProject: false
 ---
 

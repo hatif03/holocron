@@ -1,6 +1,6 @@
 # Holocron
 
-**Holocron** is a local-first AI research platform. Map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready LaTeX and PDF output through a multi-agent writing pipeline. The UI follows a **Research Workbench** aesthetic — calm, data-dense surfaces for long research sessions; inference is bring-your-own-key (BYOK).
+**Holocron** is a local-first AI research platform. Map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready LaTeX and PDF output through a multi-agent writing pipeline. The UI uses the [WhatsApp tweakcn theme](https://tweakcn.com/themes/cmmbmmxsb000104l5fqg5b4x3) — warm greens and comfortable density for long research sessions. Inference is bring-your-own-key (BYOK).
 
 Everything runs on your machine. **Prerequisites:** [Node.js 20+](https://nodejs.org/) and [Docker Desktop](https://www.docker.com/products/docker-desktop/) — see the [install guide](https://holocron.vercel.app/install) or run `holocron install-guide`.
 
@@ -12,10 +12,10 @@ Marketing site: [holocron.vercel.app](https://holocron.vercel.app) (deploy `apps
 
 ```bash
 # 1. Verify prerequisites (Node 20+, Docker running, ports free)
-npx holocron-research@1.0.3 doctor
+npx holocron-research@1.0.4 doctor
 
 # 2. First run — setup wizard + Docker images + browser
-npx holocron-research@1.0.3 start
+npx holocron-research@1.0.4 start
 ```
 
 First run:
@@ -40,6 +40,18 @@ Holocron uses [Supermemory Local](https://supermemory.ai/docs/self-hosting/overv
 | `holocron status` | Show service health |
 | `holocron seed` | Load OWID climate-health showcase graph |
 | `holocron stop` | Tear down containers |
+
+**Showcase demos** (from repo root after `start:local`):
+
+```bash
+npm run seed:showcase              # OWID CO₂ / life expectancy graph
+npm run seed:showcase:renewables   # Energy transition graph + recall memories
+npm run seed:recall:demo           # Pre-seed Supermemory for both showcases
+npm run gen:showcase "Renewable"   # Generate paper from renewables work
+npm run verify:showcase            # Verify PDFs + memory recall timeline
+```
+
+See [docs/DEMO.md](docs/DEMO.md) for a full demo video script.
 
 Install globally:
 
@@ -182,6 +194,9 @@ npm run gen:verify   # Verify latest generation artifacts
 npm run gen:cleanup  # Remove failed/stub generations
 npm run gen:backfill-events  # Reconstruct process log from disk
 npm run seed:showcase        # OWID climate-health demo graph
+npm run seed:showcase:renewables
+npm run seed:recall:demo
+npm run verify:showcase
 npm run cleanup:e2e          # Remove E2E test works + verify memory purge
 npm run verify:supermemory   # Supermemory E2E (self-cleaning)
 npm run verify:discover-ask  # Discover + Ask with real OWID data

@@ -69,12 +69,14 @@ Metadata on writes: `{ type, generationId, workId, section?, referenceId? }`.
 
 ### Paper generation pipeline
 
-1. **Start** — `context_for_work(work_id, title)` calls `profile` for user + work; emits Supermemory memory event to process log
+1. **Start** — `context_for_work(work_id, title)` calls `profile` for user + work; passed to **Planner** and every **Writer** section (refreshed per section)
 2. **GraphContract** — contract summary `add`ed with `customId: gen_{id}_contract`
-3. **Planner** — hybrid search for local refs; after plan, `add` with `customId: gen_{id}_plan`
-4. **Writer** — hybrid search per section; inject into `DraftRequest.context.memory`; `add` each section draft
-5. **Reviewer** — search prior review feedback; citation coverage gate before approval
+3. **Planner** — hybrid search + profile context; after plan, `add` with `customId: gen_{id}_plan`
+4. **Writer** — hybrid search per section + prior-section draft recall; explicit prompt blocks for `memory`, `section_memory`, `prior_sections_memory`; `add` each section draft
+5. **Reviewer** — search prior review feedback (stored after each non-approved round); profile + review memory in all review paths
 6. **Complete** — `add` generation summary with `type: generation_complete`
+
+**Second run on same work:** Introduction/Methods searches recall prior `gen_*_{section}` drafts — visible in Memory trace `search` events with `recalledCount > 0`.
 
 ### Web UI (MemoryView)
 
@@ -105,7 +107,8 @@ Shared component: `apps/web/src/components/memory/MemoryView.tsx`
 
 | Surface | API | Features |
 |---------|-----|----------|
-| Generation detail | `GET /api/generations/[genId]/memory` | Rich search hits during run |
+| Generation detail | `GET /api/generations/[genId]/memory/recalls` | Full pipeline recall timeline from events |
+| Generation detail (live) | `GET /api/generations/[genId]/memory` | On-demand search when drilling into an event |
 | Research graph sidebar | `GET /api/works/[workId]/memory/search` | Hybrid search |
 | Profile block | `GET /api/works/[workId]/memory/profile` | Static + dynamic profile + hits |
 

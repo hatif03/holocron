@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import Any
 
 import httpx
@@ -16,6 +17,7 @@ _settings_configured = False
 _warned_unreachable = False
 
 LOCAL_USER_ID = "00000000-0000-0000-0000-000000000001"
+SEARCH_THRESHOLD = 0.3
 
 FILTER_PROMPT = (
     "This is Holocron, a research paper generation app. "
@@ -49,7 +51,7 @@ def get_client():
             base_url=settings.supermemory_api_url.rstrip("/"),
         )
     except Exception as e:
-        logger.debug("Supermemory client unavailable: %s", e)
+        logger.warning("Supermemory client unavailable: %s", e)
         return None
 
 
@@ -114,6 +116,24 @@ def _format_profile(profile_data: Any, search_results: Any = None) -> str:
     return "\n\n".join(parts)
 
 
+def _parse_search_results(results: Any) -> list[str]:
+    items: list[str] = []
+    if results is None:
+        return items
+    result_list = getattr(results, "results", None)
+    if result_list is None and isinstance(results, dict):
+        result_list = results.get("results", [])
+    if result_list is None:
+        return items
+    for r in result_list:
+        mem = getattr(r, "memory", None) or getattr(r, "chunk", None)
+        if mem is None and isinstance(r, dict):
+            mem = r.get("memory") or r.get("chunk")
+        if mem:
+            items.append(str(mem))
+    return items
+
+
 async def context_for_work(
     work_id: str,
     query: str,
@@ -135,7 +155,7 @@ async def context_for_work(
             if formatted:
                 out.append(f"User preferences:\n{formatted}")
         except Exception as e:
-            logger.debug("User profile fetch failed: %s", e)
+            logger.warning("User profile fetch failed: %s", e)
         try:
             work_prof = client.profile(container_tag=_work_tag(work_id), q=query)
             formatted = _format_profile(
@@ -145,7 +165,7 @@ async def context_for_work(
             if formatted:
                 out.append(f"Work context:\n{formatted}")
         except Exception as e:
-            logger.debug("Work profile fetch failed: %s", e)
+            logger.warning("Work profile fetch failed: %s", e)
         return "\n\n".join(out)
 
     try:
@@ -165,33 +185,33 @@ async def store_memory(
     *,
     custom_id: str | None = None,
     metadata: dict[str, Any] | None = None,
-) -> None:
+) -> str | None:
     """Supermemory: add documents — persist agent outputs (docs/SUPERMEMORY.md)."""
     client = get_client()
     if not client or not content.strip():
-        return
+        return None
 
     def _add():
         kwargs: dict[str, Any] = {
             "content": content,
             "container_tag": _work_tag(work_id),
+            "dreaming": "instant",
         }
         if custom_id:
             kwargs["custom_id"] = custom_id
         if metadata:
             kwargs["metadata"] = metadata
-        client.add(**kwargs)
+        resp = client.add(**kwargs)
+        doc_id = getattr(resp, "id", None)
+        if doc_id is None and isinstance(resp, dict):
+            doc_id = resp.get("id")
+        return doc_id
 
     try:
-        await asyncio.to_thread(_add)
+        return await asyncio.to_thread(_add)
     except Exception as e:
-        logger.debug("Supermemory store failed: %s", e)
-
-
-async def search_work(work_id: str, query: str, limit: int = 5) -> str:
-    """Supermemory: hybrid search — recall prior drafts and refs (docs/SUPERMEMORY.md)."""
-    hits = await search_work_hits(work_id, query, limit=limit)
-    return "\n".join(hits)
+        logger.warning("Supermemory store failed: %s", e)
+        return None
 
 
 async def search_work_hits(work_id: str, query: str, limit: int = 5) -> list[str]:
@@ -206,17 +226,36 @@ async def search_work_hits(work_id: str, query: str, limit: int = 5) -> list[str
             container_tag=_work_tag(work_id),
             search_mode="hybrid",
             limit=limit,
-            threshold=0.4,
+            threshold=SEARCH_THRESHOLD,
         )
-        items = []
-        for r in results.results:
-            mem = getattr(r, "memory", None) or getattr(r, "chunk", None)
-            if mem:
-                items.append(str(mem))
-        return items
+        return _parse_search_results(results)
 
     try:
         return await asyncio.to_thread(_search)
     except Exception as e:
-        logger.debug("Supermemory search failed: %s", e)
+        logger.warning("Supermemory search failed for work_%s q=%r: %s", work_id, query[:80], e)
         return []
+
+
+async def search_work(work_id: str, query: str, limit: int = 5) -> str:
+    """Supermemory: hybrid search — recall prior drafts and refs (docs/SUPERMEMORY.md)."""
+    hits = await search_work_hits(work_id, query, limit=limit)
+    return "\n".join(hits)
+
+
+async def wait_for_searchable(
+    work_id: str,
+    query: str,
+    *,
+    timeout_s: float = 30.0,
+    interval_s: float = 1.0,
+    limit: int = 3,
+) -> list[str]:
+    """Poll hybrid search until hits appear or timeout (post instant-dreaming store)."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        hits = await search_work_hits(work_id, query, limit=limit)
+        if hits:
+            return hits
+        await asyncio.sleep(interval_s)
+    return []

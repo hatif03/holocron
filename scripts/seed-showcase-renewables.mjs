@@ -24,6 +24,7 @@ import {
   writeRenewablesBarPng,
   writeFossilShareHistogramPng,
   seedRecallMemories,
+  waitForSearchable,
 } from "./seed-utils.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -342,6 +343,10 @@ async function seedDemoMemories(workId) {
   ];
   const n = await seedRecallMemories(workId, LOCAL_USER, memories);
   console.log(`Seeded ${n} Supermemory recall documents.`);
+  if (n > 0) {
+    const hits = await waitForSearchable(workId, "Introduction draft", { timeoutMs: 45_000 });
+    console.log(`  Searchable hits after seed: ${hits.length}`);
+  }
 }
 
 async function main() {

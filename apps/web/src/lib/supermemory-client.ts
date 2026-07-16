@@ -6,9 +6,11 @@ import fs from "fs";
 import {
   LOCAL_USER_ID,
   SUPERMEMORY_FILTER_PROMPT,
+  SUPERMEMORY_SEARCH_THRESHOLD,
   userTag,
   workTag,
 } from "@holocron/shared";
+import { readAppConfig } from "@/lib/app-config";
 import type { MemoryHit, MemoryProfile } from "./memory-types";
 
 export type { MemoryHit, MemoryProfile };
@@ -16,17 +18,22 @@ export type { MemoryHit, MemoryProfile };
 export { LOCAL_USER_ID, workTag, userTag };
 
 const BASE_URL = process.env.SUPERMEMORY_API_URL ?? "http://localhost:6767";
-const API_KEY = process.env.SUPERMEMORY_API_KEY ?? "";
 
 let settingsConfigured = false;
 
+function resolveApiKey(): string {
+  const envKey = (process.env.SUPERMEMORY_API_KEY ?? "").trim();
+  if (envKey) return envKey;
+  return (readAppConfig().supermemoryApiKey ?? "").trim();
+}
+
 export function isSupermemoryEnabled(): boolean {
-  return Boolean(API_KEY.trim());
+  return Boolean(resolveApiKey().trim());
 }
 
 function authHeaders(contentType = "application/json"): HeadersInit {
   return {
-    Authorization: `Bearer ${API_KEY}`,
+    Authorization: `Bearer ${resolveApiKey()}`,
     "Content-Type": contentType,
   };
 }
@@ -77,6 +84,7 @@ export async function storeMemory(opts: {
       body: JSON.stringify({
         content: opts.content,
         containerTag: opts.containerTag,
+        dreaming: "instant",
         ...(opts.customId ? { customId: opts.customId } : {}),
         ...(opts.metadata ? { metadata: opts.metadata } : {}),
       }),
@@ -138,7 +146,7 @@ export async function searchMemoriesRich(
         containerTag: workTag(workId),
         searchMode: "hybrid",
         limit,
-        threshold: 0.6,
+        threshold: SUPERMEMORY_SEARCH_THRESHOLD,
       }),
     });
     if (!(await checkResponse(resp, "searchMemoriesRich"))) return [];
@@ -292,7 +300,7 @@ export async function ingestReferencePdf(
 
     const resp = await fetch(`${BASE_URL}/v3/documents/file`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${API_KEY}` },
+      headers: { Authorization: `Bearer ${resolveApiKey()}` },
       body: formData,
     });
     await checkResponse(resp, "ingestReferencePdf");

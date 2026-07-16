@@ -56,7 +56,8 @@ async function main() {
       ok = false;
     }
     if (withHits.length < 1) {
-      console.warn("  WARN: no search events with recalled hits (may need real LLM + seeded memories)");
+      console.error("  FAIL: no search events with recalled hits (re-seed with seed-recall-demo.mjs)");
+      ok = false;
     }
   }
 

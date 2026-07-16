@@ -78,6 +78,18 @@ Metadata on writes: `{ type, generationId, workId, section?, referenceId? }`.
 
 **Second run on same work:** Introduction/Methods searches recall prior `gen_*_{section}` drafts — visible in Memory trace `search` events with `recalledCount > 0`.
 
+### Indexing and `dreaming: instant`
+
+Supermemory processes documents asynchronously. The default `dreaming: "dynamic"` batches related documents before extracting searchable memories — fine for bulk ingest, but Holocron stores isolated agent outputs (planner, sections, reviews) that must be recallable within seconds.
+
+Holocron sets **`dreaming: "instant"`** on every `POST /v3/documents` write (agents, web, seed scripts) so each store becomes searchable on its own.
+
+After each section store, the pipeline calls **`wait_for_searchable(work_id, query)`** — polling `POST /v4/search` until hits appear (or timeout). Search threshold is **`SUPERMEMORY_SEARCH_THRESHOLD` (0.3)** in `@holocron/shared`.
+
+Memory trace **`search` events** are emitted for every search attempt (`attempted: true`, `recalledCount` may be 0). Re-seed showcase works after upgrading: `npm run seed:recall:demo`.
+
+Diagnostic: `node scripts/diagnose-supermemory-search.mjs`
+
 ### Web UI (MemoryView)
 
 - Research graph sidebar **Memory** tab — search/profile for `work_{id}`

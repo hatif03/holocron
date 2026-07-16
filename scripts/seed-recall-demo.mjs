@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import postgres from "postgres";
-import { seedRecallMemories } from "./seed-utils.mjs";
+import { seedRecallMemories, waitForSearchable } from "./seed-utils.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.join(__dirname, "..", ".env");
@@ -74,6 +74,10 @@ async function main() {
         ];
     const n = await seedRecallMemories(work.id, LOCAL_USER, memories);
     console.log(`Seeded ${n} memories for ${work.title.slice(0, 60)}…`);
+    if (n > 0) {
+      const hits = await waitForSearchable(work.id, "Introduction draft", { timeoutMs: 45_000 });
+      console.log(`  Searchable hits after seed: ${hits.length}`);
+    }
   }
   await sql.end();
 }

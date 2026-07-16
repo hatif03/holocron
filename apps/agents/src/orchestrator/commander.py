@@ -20,7 +20,7 @@ from ..orchestrator.graph_context import (
 )
 from ..orchestrator.chart_generator import generate_charts_from_graph
 from ..orchestrator.graph_contract import GraphContract
-from ..supermemory_client import context_for_work, search_work, search_work_hits, store_memory
+from ..supermemory_client import context_for_work, search_work, search_work_hits, store_memory, wait_for_searchable
 
 EventCallback = Callable[[str, str, str, dict], Awaitable[None]]
 
@@ -170,10 +170,16 @@ async def _emit_memory(
         "query": query,
         "phase": "planning" if action == "profile" else "body_sections",
     }
-    if recalled_count:
+    if action == "search":
+        meta["attempted"] = True
         meta["recalledCount"] = recalled_count
-    if hits:
-        meta["hits"] = [h[:400] for h in hits[:3]]
+        if hits:
+            meta["hits"] = [h[:400] for h in hits[:3]]
+    else:
+        if recalled_count:
+            meta["recalledCount"] = recalled_count
+        if hits:
+            meta["hits"] = [h[:400] for h in hits[:3]]
     await _emit(on_event, "Supermemory", "memory", message, meta)
 
 
@@ -240,23 +246,26 @@ async def _write_section(
     section_hits = await search_work_hits(req.work_id, search_q, limit=3)
     prior_hits: list[str] = []
     if prior_names:
-        prior_q = f"prior draft {' '.join(prior_names[-4:])} {paper_title}"
-        prior_hits = await search_work_hits(req.work_id, prior_q, limit=3)
-        if prior_hits:
-            await _emit_memory(
-                on_event, req.work_id, "search",
-                f"Recalled {len(prior_hits)} prior section memories for {name}",
-                section=name, query=prior_q, preview="\n".join(prior_hits)[:500],
-                recalled_count=len(prior_hits), hits=prior_hits,
-            )
-    section_memory = "\n".join(section_hits + prior_hits)
-    if section_hits:
+        seen_prior: set[str] = set()
+        for prior_name in prior_names[-4:]:
+            prior_q = f"section: {prior_name}"
+            for hit in await search_work_hits(req.work_id, prior_q, limit=2):
+                if hit not in seen_prior:
+                    seen_prior.add(hit)
+                    prior_hits.append(hit)
+        prior_q = f"section: {prior_names[-1]}"
         await _emit_memory(
             on_event, req.work_id, "search",
-            f"Recalled {len(section_hits)} memories for {name}",
-            section=name, query=search_q, preview=section_memory,
-            recalled_count=len(section_hits), hits=section_hits,
+            f"Recalled {len(prior_hits)} prior section memories for {name}",
+            section=name, query=prior_q, preview="\n".join(prior_hits)[:500],
+            recalled_count=len(prior_hits), hits=prior_hits or None,
         )
+    await _emit_memory(
+        on_event, req.work_id, "search",
+        f"Recalled {len(section_hits)} memories for {name}",
+        section=name, query=search_q, preview="\n".join(section_hits)[:500],
+        recalled_count=len(section_hits), hits=section_hits or None,
+    )
 
     draft = await draft_section(
         DraftRequest(
@@ -289,14 +298,13 @@ async def _write_section(
         review_query = f"review feedback {name} {paper_title}"
         review_hits = await search_work_hits(req.work_id, review_query, limit=3)
         review_memory = "\n".join(review_hits)
-        if review_hits:
-            await _emit_memory(
-                on_event, req.work_id, "search",
-                f"Recalled {len(review_hits)} review memories for {name}",
-                section=name, query=review_query,
-                preview=review_hits[0][:300] if review_hits else "",
-                recalled_count=len(review_hits), hits=review_hits,
-            )
+        await _emit_memory(
+            on_event, req.work_id, "search",
+            f"Recalled {len(review_hits)} review memories for {name}",
+            section=name, query=review_query,
+            preview=review_hits[0][:300] if review_hits else "",
+            recalled_count=len(review_hits), hits=review_hits or None,
+        )
         for i in range(max_reviews):
             await _emit(
                 on_event, "Reviewer", "reviewing",
@@ -347,18 +355,20 @@ async def _write_section(
                         "workId": req.work_id,
                     },
                 )
+                await wait_for_searchable(
+                    req.work_id, f"review feedback {name}", timeout_s=10
+                )
             review_hits = await search_work_hits(
                 req.work_id, f"review feedback {name} {paper_title}", limit=3
             )
             review_memory = "\n".join(review_hits)
-            if review_hits:
-                await _emit_memory(
-                    on_event, req.work_id, "search",
-                    f"Recalled {len(review_hits)} review memories (round {i + 2})",
-                    section=name, query=review_query,
-                    preview=review_hits[0][:300],
-                    recalled_count=len(review_hits), hits=review_hits,
-                )
+            await _emit_memory(
+                on_event, req.work_id, "search",
+                f"Recalled {len(review_hits)} review memories (round {i + 2})",
+                section=name, query=review_query,
+                preview=review_hits[0][:300] if review_hits else "",
+                recalled_count=len(review_hits), hits=review_hits or None,
+            )
 
     if word_count < min_words and graph_snippets:
         content = _fallback_section_latex(name, graph_snippets, bib_keys, section_latex)
@@ -388,6 +398,7 @@ async def _write_section(
         custom_id=f"gen_{gen_id}_{safe_name}",
         metadata={"type": "writer", "generationId": gen_id, "workId": req.work_id, "section": name},
     )
+    await wait_for_searchable(req.work_id, f"section: {name}", timeout_s=15)
     await _emit_memory(
         on_event, req.work_id, "store",
         f"Stored {name} draft in Supermemory",

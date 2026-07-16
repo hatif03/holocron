@@ -401,6 +401,7 @@ export async function seedRecallMemories(workId, userId, memories) {
         body: JSON.stringify({
           content: mem.content,
           containerTag,
+          dreaming: "instant",
           customId: mem.customId,
           metadata: { ...mem.metadata, workId, userId },
         }),
@@ -412,6 +413,49 @@ export async function seedRecallMemories(workId, userId, memories) {
     }
   }
   return count;
+}
+
+const SEARCH_THRESHOLD = 0.3;
+
+export async function searchSupermemoryWork(workId, query, limit = 5) {
+  const smUrl = process.env.SUPERMEMORY_API_URL || "http://localhost:6767";
+  const smKey = process.env.SUPERMEMORY_API_KEY || "";
+  if (!smKey) return [];
+  try {
+    const res = await fetch(`${smUrl}/v4/search`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${smKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        q: query,
+        containerTag: `work_${workId}`,
+        searchMode: "hybrid",
+        limit,
+        threshold: SEARCH_THRESHOLD,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results ?? [])
+      .map((r) => r.memory ?? r.chunk ?? "")
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** Poll hybrid search until hits appear or timeout (after instant-dreaming store). */
+export async function waitForSearchable(workId, query, { timeoutMs = 30_000, intervalMs = 1000 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const hits = await searchSupermemoryWork(workId, query, 3);
+    if (hits.length > 0) return hits;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return [];
 }
 
 export async function downloadOwidCsv(slug, destPath) {
@@ -576,6 +620,7 @@ export async function ingestGraphMemory(workId, title, nodeCount, edgeCount) {
       body: JSON.stringify({
         content: `Research work "${title}" seeded with ${nodeCount} nodes and ${edgeCount} edges.`,
         containerTag: `work_${workId}`,
+        dreaming: "instant",
         customId: `work_${workId}_seed`,
         metadata: { type: "graph", workId },
       }),

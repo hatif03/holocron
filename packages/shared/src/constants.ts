@@ -11,6 +11,9 @@ export function userTag(userId: string = LOCAL_USER_ID): string {
   return `user_${userId}`;
 }
 
+/** Hybrid search similarity threshold — permissive for local demo recall. */
+export const SUPERMEMORY_SEARCH_THRESHOLD = 0.3;
+
 /** Holocron-specific LLM filter for Supermemory memory extraction. */
 export const SUPERMEMORY_FILTER_PROMPT =
   "This is Holocron, a research paper generation app. " +

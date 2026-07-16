@@ -39,6 +39,7 @@
     "graph:respread": "node scripts/respread-graph-nodes.mjs",
     "cleanup:e2e": "node scripts/cleanup-e2e-artifacts.mjs",
     "verify:supermemory": "node scripts/verify-supermemory-e2e.mjs",
+    "diagnose:supermemory": "node scripts/diagnose-supermemory-search.mjs",
     "verify:discover-ask": "node scripts/verify-discover-ask-realworld.mjs"
   },
   "devDependencies": {

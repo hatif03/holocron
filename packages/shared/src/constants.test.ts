@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LOCAL_USER_ID, workTag, userTag, SUPERMEMORY_FILTER_PROMPT } from "./constants.js";
+import { LOCAL_USER_ID, workTag, userTag, SUPERMEMORY_FILTER_PROMPT, SUPERMEMORY_SEARCH_THRESHOLD } from "./constants.js";
 
 describe("constants", () => {
   it("exports local user id", () => {
@@ -13,5 +13,6 @@ describe("constants", () => {
 
   it("includes holocron filter prompt", () => {
     expect(SUPERMEMORY_FILTER_PROMPT).toContain("Holocron");
+    expect(SUPERMEMORY_SEARCH_THRESHOLD).toBe(0.3);
   });
 });

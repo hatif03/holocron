@@ -28,6 +28,7 @@ export async function GET(
         containerTag: String(meta.containerTag || ""),
         phase: String(meta.phase || ""),
         recalledCount: Number(meta.recalledCount || 0) || undefined,
+        attempted: meta.attempted === true,
         hits: Array.isArray(meta.hits) ? (meta.hits as string[]) : undefined,
         createdAt: ev.created_at,
       };

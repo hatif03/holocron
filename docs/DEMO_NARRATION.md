@@ -36,7 +36,11 @@ This is the new operating system for research. This is **Holocron**.
 6. Process Log + Explorer + PDF (three-panel scroll)  
 7. References: add/analyze a paper  
 8. Settings: dependencies green  
-9. Terminal: `npx holocron-research@1.0.5 status`
+9. Terminal: `npx holocron-research@1.0.6 status`
 
-**Demo generation URL (renewables, with search recalls):**  
-http://localhost:3000/paper-generation/4d9df851-1f58-4f46-820b-ab6da3d5e28b
+**Demo generation URLs:**
+
+| Showcase | URL |
+|----------|-----|
+| Renewables (Supermemory) | http://localhost:3000/paper-generation/4d9df851-1f58-4f46-820b-ab6da3d5e28b |
+| OWID (figures + PDF) | http://localhost:3000/paper-generation/7189879b-9f93-47ed-9634-79e48737db9c |

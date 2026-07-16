@@ -39,11 +39,14 @@ Ensure K2 Think (or another LLM) is configured in **Settings** — mock mode pro
 2. On the new generation detail page, expand Memory trace
 3. Highlight **Introduction** / **Methods** recall events — prior section drafts from Run 1
 
-## Act 4 — OWID climate paper (optional)
+## Act 4 — OWID climate paper (capability showcase)
 
 1. Open the OWID CO₂ / life expectancy showcase work
-2. Generate paper or open latest completed generation
+2. Open completed generation — figures, Methods code, CSV-backed charts
 3. Show image preview in Explorer (click PNG in Figures)
+4. Expand Memory trace — search recalls with hits
+
+**Working demo URL:** http://localhost:3000/paper-generation/7189879b-9f93-47ed-9634-79e48737db9c (70 search recalls, regenerated with LaTeX fixes)
 
 ## Act 5 — References + Settings + CLI
 
@@ -54,9 +57,18 @@ Ensure K2 Think (or another LLM) is configured in **Settings** — mock mode pro
 ## Verification commands
 
 ```bash
-npm run verify:supermemory
+npm run diagnose:supermemory
 node scripts/verify-showcase-papers.mjs
 npm run gen:verify <generation-id>
 ```
 
-Expected: renewables generation shows `search recalls with hits > 0`; diagnose script PASS.
+Expected: **two** showcase generations (renewables + OWID), each with `search recalls with hits > 0`; diagnose script PASS.
+
+### Public install smoke test
+
+```bash
+npx holocron-research@1.0.6 doctor
+npx holocron-research@1.0.6 start
+npm run seed:showcase && npm run seed:showcase:renewables && npm run seed:recall:demo
+node scripts/verify-showcase-papers.mjs
+```

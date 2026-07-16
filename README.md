@@ -12,10 +12,10 @@ Marketing site: [holocron.vercel.app](https://holocron.vercel.app) (deploy `apps
 
 ```bash
 # 1. Verify prerequisites (Node 20+, Docker running, ports free)
-npx holocron-research@1.0.5 doctor
+npx holocron-research@1.0.6 doctor
 
 # 2. First run — setup wizard + Docker images + browser
-npx holocron-research@1.0.5 start
+npx holocron-research@1.0.6 start
 ```
 
 First run:
@@ -52,6 +52,8 @@ npm run verify:showcase            # Verify PDFs + memory recall timeline
 ```
 
 See [docs/DEMO.md](docs/DEMO.md) and [docs/DEMO_NARRATION.md](docs/DEMO_NARRATION.md) for demo recording scripts.
+
+**v1.0.6 highlights:** LaTeX formatting fixes (abstract block, figure paths, compile passes), dev stack `.next` cache isolation, two curated showcase papers with Supermemory search recalls.
 
 **v1.0.5 highlights:** Supermemory search recalls (`dreaming: instant`), independent panel scroll on paper detail, [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) + [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif) typography, loading skeletons.
 

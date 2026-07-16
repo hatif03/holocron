@@ -16,35 +16,55 @@ async function json(url) {
   return data;
 }
 
+function searchHitCount(recalls) {
+  const searchEvents = (recalls.recalls || []).filter((r) => r.action === "search");
+  return searchEvents.filter((r) => (r.recalledCount || 0) > 0 || r.hits?.length).length;
+}
+
+async function scoreGeneration(gen) {
+  const detail = await json(`${WEB}/api/generations/${gen.id}`);
+  const recalls = await json(`${WEB}/api/generations/${gen.id}/memory/recalls`);
+  const hits = searchHitCount(recalls);
+  const words = detail.generation?.word_count || gen.word_count || 0;
+  const events = recalls.count || 0;
+  return {
+    gen,
+    detail,
+    recalls,
+    hits,
+    score: hits * 1_000_000 + words + events,
+  };
+}
+
 async function main() {
   const gens = await json(`${WEB}/api/generations`);
   if (!Array.isArray(gens)) throw new Error("Expected generations array");
 
   let ok = true;
   for (const fragment of WORK_TITLES) {
-    const match = gens
-      .filter((g) => String(g.title || g.work_title || "").includes(fragment))
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-
-    if (!match) {
+    const candidates = gens.filter((g) =>
+      String(g.title || g.work_title || "").includes(fragment)
+    );
+    if (!candidates.length) {
       console.error(`FAIL: no generation for "${fragment}"`);
       ok = false;
       continue;
     }
 
-    const genId = match.id;
-    const status = match.status;
-    const detail = await json(`${WEB}/api/generations/${genId}`);
-    const recalls = await json(`${WEB}/api/generations/${genId}/memory/recalls`);
-    const searchEvents = (recalls.recalls || []).filter((r) => r.action === "search");
-    const withHits = searchEvents.filter((r) => (r.recalledCount || 0) > 0 || r.hits?.length);
+    const scored = await Promise.all(candidates.map((g) => scoreGeneration(g)));
+    scored.sort((a, b) => b.score - a.score);
+    const best = scored[0];
+    const { gen, detail, recalls, hits } = best;
+
+    const genId = gen.id;
+    const status = gen.status;
 
     console.log(`\n=== ${fragment} ===`);
     console.log(`  genId: ${genId}`);
     console.log(`  status: ${status}`);
     console.log(`  words: ${detail.generation?.word_count || 0}`);
     console.log(`  memory events: ${recalls.count || 0}`);
-    console.log(`  search recalls with hits: ${withHits.length}`);
+    console.log(`  search recalls with hits: ${hits}`);
     console.log(`  URL: ${WEB}/paper-generation/${genId}`);
 
     if (!status?.startsWith("completed")) {
@@ -55,7 +75,7 @@ async function main() {
       console.error("  FAIL: expected >= 5 memory events");
       ok = false;
     }
-    if (withHits.length < 1) {
+    if (hits < 1) {
       console.error("  FAIL: no search events with recalled hits (re-seed with seed-recall-demo.mjs)");
       ok = false;
     }

@@ -39,6 +39,12 @@ async def _generate_draft(
     req: DraftRequest, expand: bool = False, prior: str = ""
 ) -> str:
     section_lower = req.section_name.lower()
+    is_abstract = section_lower == "abstract"
+    header_hint = (
+        "Use \\begin{abstract}...\\end{abstract} (no \\section header)."
+        if is_abstract
+        else f"Use \\section{{{req.section_name}}} as the section header."
+    )
     cite_hint = ""
     if req.bib_keys:
         if section_lower in ("related work", "related_work"):
@@ -73,7 +79,7 @@ async def _generate_draft(
         f"of a {req.style_guide} academic paper following IMRaD conventions. "
         f"Target approximately {req.target_words} words in {req.paragraphs} paragraphs. "
         f"Ground all claims in the provided graph context — do not invent unsupported results. "
-        f"Use \\section{{{req.section_name}}} as the section header. "
+        f"{header_hint} "
         f"Output only valid LaTeX (no markdown fences).{cite_hint}"
     )
     if expand:
@@ -118,8 +124,16 @@ async def _generate_draft(
     if word_count < 50 and req.graph_snippets:
         bib_cites = " ".join(f"\\cite{{{k}}}" for k in req.bib_keys[:8])
         fallback = (
-            f"\\section{{{req.section_name}}}\n"
-            + "\n\n".join(req.graph_snippets[:8])
+            (
+                f"\\begin{{abstract}}\n"
+                + "\n\n".join(req.graph_snippets[:8])
+                + "\n\\end{abstract}\n"
+            )
+            if is_abstract
+            else (
+                f"\\section{{{req.section_name}}}\n"
+                + "\n\n".join(req.graph_snippets[:8])
+            )
             + (f"\n\nPrior work: {bib_cites}" if bib_cites else "")
             + (f"\n\n{req.latex_blocks}" if req.latex_blocks else "")
         )

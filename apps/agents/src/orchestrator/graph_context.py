@@ -509,9 +509,11 @@ def build_section_latex_blocks(
 
 def latex_table_from_graph(table_node: dict[str, Any]) -> str:
     """Build a LaTeX table block from a graph table node."""
-    caption = str(table_node.get("caption") or table_node.get("label") or "Results")
+    caption = _latex_escape(
+        str(table_node.get("caption") or table_node.get("label") or "Results")
+    )
     columns = str(table_node.get("columns") or "Col1, Col2")
-    cols = [c.strip() for c in columns.split(",") if c.strip()]
+    cols = [_latex_escape(c.strip()) for c in columns.split(",") if c.strip()]
     col_spec = "l" * max(len(cols), 1)
     lines = [
         "\\begin{table}[h]",
@@ -527,7 +529,7 @@ def latex_table_from_graph(table_node: dict[str, Any]) -> str:
         row = row.strip()
         if not row:
             continue
-        cells = [c.strip() for c in row.split(",")]
+        cells = [_latex_escape(c.strip()) for c in row.split(",")]
         while len(cells) < len(cols):
             cells.append("")
         lines.append(" & ".join(cells[: len(cols)]) + " \\\\")

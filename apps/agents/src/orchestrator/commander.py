@@ -122,7 +122,6 @@ def _build_main_tex(title: str, venue_style: str, sections: list[str]) -> str:
         bib_style = "naturemag"
 
     lines.append("\\lstset{breaklines=true,basicstyle=\\ttfamily\\small}")
-    lines.append("\\graphicspath{{figures/}}")
 
     for section in sections:
         safe = section.replace(" ", "_")
@@ -133,12 +132,34 @@ def _build_main_tex(title: str, venue_style: str, sections: list[str]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _normalize_section_latex(section_name: str, content: str) -> str:
+    """Ensure Abstract uses abstract environment, not a numbered section."""
+    if section_name.lower() != "abstract":
+        return content
+    body = content.strip()
+    for prefix in (r"\section{Abstract}", r"\section*{Abstract}"):
+        if body.startswith(prefix):
+            body = body[len(prefix) :].lstrip()
+            break
+    if body.startswith(r"\begin{abstract}"):
+        return body
+    return f"\\begin{{abstract}}\n{body}\n\\end{{abstract}}\n"
+
+
 def _fallback_section_latex(
     section_name: str,
     graph_snippets: list[str],
     bib_keys: list[str],
     latex_blocks: str = "",
 ) -> str:
+    if section_name.lower() == "abstract":
+        body = "\n\n".join(snip.replace("bibtex:", "Reference:") for snip in graph_snippets[:12])
+        if bib_keys:
+            cite_line = " ".join(f"\\cite{{{k}}}" for k in bib_keys[:8])
+            body += f"\n\nPrior work establishes context for this study {cite_line}."
+        if latex_blocks:
+            body += f"\n\n{latex_blocks}"
+        return f"\\begin{{abstract}}\n{body.strip()}\n\\end{{abstract}}\n"
     lines = [f"\\section{{{section_name}}}"]
     for snip in graph_snippets[:12]:
         lines.append(snip.replace("bibtex:", "Reference:"))
@@ -385,6 +406,7 @@ async def _write_section(
             f"Section {name} is empty or too short ({word_count} words) despite graph content — cannot continue."
         )
 
+    content = _normalize_section_latex(name, content)
     section_path = sections_dir / f"{safe_name}.tex"
     if word_count < 10:
         raise ValueError(f"Section {name} failed — {word_count} words after fallback.")

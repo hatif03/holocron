@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Play } from "lucide-react";
+import { DEMO_VIDEO_URL, DOCS_URL } from "@/lib/site-data";
 
 const steps = [
   {
@@ -31,19 +33,26 @@ export default function DocsPage() {
   return (
     <div className="px-4 py-16">
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-3xl font-bold tracking-tight">User Guide</h1>
+        <p className="section-label mb-4">User guide</p>
+        <h1 className="font-display text-4xl font-bold tracking-tight">Getting started</h1>
         <p className="mt-3 text-muted-foreground">
-          Quick start for Holocron v1. For developer docs, see the{" "}
-          <a
-            href="https://github.com/hatif03/holocron/tree/main/docs"
-            className="text-primary hover:underline"
-            target="_blank"
-            rel="noreferrer"
-          >
+          Quick start for Holocron. For developer docs, see the{" "}
+          <a href={DOCS_URL} className="text-primary hover:underline" target="_blank" rel="noreferrer">
             GitHub docs folder
           </a>
           .
         </p>
+
+        <a
+          href={DEMO_VIDEO_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-6 inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-medium transition hover:bg-muted"
+        >
+          <Play className="h-4 w-4 text-primary" />
+          Watch the demo video
+        </a>
+
         <ol className="mt-10 space-y-8">
           {steps.map((step, i) => (
             <li key={step.title} className="flex gap-4">
@@ -57,11 +66,21 @@ export default function DocsPage() {
             </li>
           ))}
         </ol>
+
         <p className="mt-12 text-sm text-muted-foreground">
           Need help installing? See the{" "}
           <Link href="/install" className="text-primary hover:underline">
             install guide
           </Link>
+          . Want to contribute? See{" "}
+          <a
+            href="https://github.com/hatif03/holocron/blob/main/CONTRIBUTING.md"
+            className="text-primary hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            CONTRIBUTING.md
+          </a>
           .
         </p>
       </div>

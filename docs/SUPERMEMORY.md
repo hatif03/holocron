@@ -99,8 +99,6 @@ Diagnostic: `node scripts/diagnose-supermemory-search.mjs`
 - `MemoryActivityStrip` — expandable client-side activity timeline
 - App shell memory health dot (green/amber/gray)
 
-See [CITE_SMART_BORROW.md](./CITE_SMART_BORROW.md) for discovery and ask chat details.
-
 ### memoryTrace responses
 
 Write APIs return a `memoryTrace` object where applicable:

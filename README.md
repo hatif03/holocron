@@ -1,10 +1,21 @@
-# Holocron
+<p align="center">
+  <img src="docs/assets/holocron-light.png" alt="Holocron" width="320" />
+</p>
 
-**Holocron** is a local-first AI research platform. Map hypotheses, literature, and experiments on a visual research graph, then generate publication-ready LaTeX and PDF output through a multi-agent writing pipeline. The UI uses the [WhatsApp tweakcn theme](https://tweakcn.com/themes/cmmbmmxsb000104l5fqg5b4x3) — warm greens and comfortable density for long research sessions. Inference is bring-your-own-key (BYOK).
+<p align="center">
+  <strong>Local-first AI research platform</strong> — map hypotheses, literature, and experiments on a visual graph, then generate publication-ready LaTeX and PDF through a multi-agent pipeline.
+</p>
 
-Everything runs on your machine. **Prerequisites:** [Node.js 20+](https://nodejs.org/) and [Docker Desktop](https://www.docker.com/products/docker-desktop/) — see the [install guide](https://holocron.vercel.app/install) or run `holocron install-guide`.
+<p align="center">
+  <a href="https://youtu.be/5Vnh6s4N_Z4">Demo video</a> ·
+  <a href="https://holocron-tawny.vercel.app/install">Install</a> ·
+  <a href="https://github.com/hatif03/holocron/tree/main/docs">Docs</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
-Marketing site: [holocron.vercel.app](https://holocron.vercel.app) (deploy `apps/marketing` to Vercel).
+Everything runs on your machine. **Prerequisites:** [Node.js 20+](https://nodejs.org/) and [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+Marketing site: [holocron-tawny.vercel.app](https://holocron-tawny.vercel.app)
 
 ---
 
@@ -12,10 +23,10 @@ Marketing site: [holocron.vercel.app](https://holocron.vercel.app) (deploy `apps
 
 ```bash
 # 1. Verify prerequisites (Node 20+, Docker running, ports free)
-npx holocron-research@1.0.6 doctor
+npx holocron-research@1.0.7 doctor
 
 # 2. First run — setup wizard + Docker images + browser
-npx holocron-research@1.0.6 start
+npx holocron-research@1.0.7 start
 ```
 
 First run:
@@ -25,9 +36,12 @@ First run:
 3. Starts Postgres, agents, LaTeX, **Supermemory Local**, and the web UI
 4. Waits for health checks and opens [http://localhost:3000](http://localhost:3000)
 
-### Persistent research memory
+Install globally:
 
-Holocron uses [Supermemory Local](https://supermemory.ai/docs/self-hosting/overview) so agents remember prior plans, drafts, references, and preferences across paper generations — all on your machine at `localhost:6767`. See [docs/SUPERMEMORY.md](docs/SUPERMEMORY.md).
+```bash
+npm install -g holocron-research
+holocron start
+```
 
 ### CLI commands
 
@@ -41,28 +55,13 @@ Holocron uses [Supermemory Local](https://supermemory.ai/docs/self-hosting/overv
 | `holocron seed` | Load OWID climate-health showcase graph |
 | `holocron stop` | Tear down containers |
 
-**Showcase demos** (from repo root after `start:local`):
+---
 
-```bash
-npm run seed:showcase              # OWID CO₂ / life expectancy graph
-npm run seed:showcase:renewables   # Energy transition graph + recall memories
-npm run seed:recall:demo           # Pre-seed Supermemory for both showcases
-npm run gen:showcase "Renewable"   # Generate paper from renewables work
-npm run verify:showcase            # Verify PDFs + memory recall timeline
-```
+## Watch the demo
 
-See [docs/DEMO.md](docs/DEMO.md) and [docs/DEMO_NARRATION.md](docs/DEMO_NARRATION.md) for demo recording scripts.
+[![Holocron demo](https://img.youtube.com/vi/5Vnh6s4N_Z4/hqdefault.jpg)](https://youtu.be/5Vnh6s4N_Z4)
 
-**v1.0.6 highlights:** LaTeX formatting fixes (abstract block, figure paths, compile passes), dev stack `.next` cache isolation, two curated showcase papers with Supermemory search recalls.
-
-**v1.0.5 highlights:** Supermemory search recalls (`dreaming: instant`), independent panel scroll on paper detail, [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) + [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif) typography, loading skeletons.
-
-Install globally:
-
-```bash
-npm install -g holocron-research
-holocron start
-```
+See [docs/DEMO.md](docs/DEMO.md) and [docs/DEMO_NARRATION.md](docs/DEMO_NARRATION.md) for recording scripts.
 
 ---
 
@@ -79,6 +78,16 @@ holocron start
 | **Agents** | `/agents` | Live status for the multi-agent pipeline |
 | **Settings** | `/settings` | Switch LLM provider and API keys (BYOK) |
 
+### Screenshots
+
+| Feature | Preview |
+|---------|---------|
+| Research works dashboard | ![Research graph works](docs/assets/screenshots/research-graph-works.png) |
+| Interactive graph canvas | ![Research graph canvas](docs/assets/screenshots/research-graph-canvas.png) |
+| Paper generation detail | ![Paper generation](docs/assets/screenshots/paper-generation-detail.png) |
+| Agent pipeline status | ![Agents dashboard](docs/assets/screenshots/agents-dashboard.png) |
+| Reference discovery | ![References discover](docs/assets/screenshots/references-discover.png) |
+
 ### Paper generation pipeline
 
 ```
@@ -93,6 +102,10 @@ Planner → Writer ⇄ Reviewer → Citation Verifier → Typesetter → VLM Rev
 - **Graph-faithful** — `GraphContract` tracks which nodes must appear in which sections; targeted re-draft on unsatisfied nodes
 
 Venue templates: Nature, IEEE, ICML.
+
+### Persistent research memory
+
+Holocron uses [Supermemory Local](https://supermemory.ai/docs/self-hosting/overview) so agents remember prior plans, drafts, references, and preferences across paper generations — all on your machine at `localhost:6767`. See [docs/SUPERMEMORY.md](docs/SUPERMEMORY.md).
 
 ---
 
@@ -170,13 +183,16 @@ node scripts/seed-template.mjs
 
 Open [http://localhost:3000](http://localhost:3000).
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor workflow.
+
 ### Monorepo layout
 
 ```
 holocron/
 ├── apps/web/           Next.js 15 frontend
 ├── apps/agents/        Python FastAPI agent service
-├── packages/cli/       holocron-research npm CLI (`npx holocron-research@latest`)
+├── apps/marketing/     Public marketing site
+├── packages/cli/       holocron-research npm CLI
 ├── packages/shared/    Shared Zod schemas and types
 ├── templates/          LaTeX venue templates
 ├── docker/             Docker Compose stacks
@@ -205,8 +221,6 @@ npm run cleanup:e2e          # Remove E2E test works + verify memory purge
 npm run verify:supermemory   # Supermemory E2E (self-cleaning)
 npm run verify:discover-ask  # Discover + Ask with real OWID data
 ```
-
-See also [docs/CITE_SMART_BORROW.md](docs/CITE_SMART_BORROW.md) for Discover/Ask design notes.
 
 App-specific guides: [apps/web/README.md](apps/web/README.md), [packages/cli/README.md](packages/cli/README.md).
 
@@ -244,4 +258,8 @@ App-specific guides: [apps/web/README.md](apps/web/README.md), [packages/cli/REA
 
 ## License
 
-MIT
+Holocron is source-available under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/).
+
+Personal, research, educational, and hobby use is permitted. **Commercial use requires separate permission** from the copyright holders.
+
+See [LICENSE](LICENSE) for the full text.

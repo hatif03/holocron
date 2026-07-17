@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Terminal, Container, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { Download, Terminal, Container, CheckCircle2, Play } from "lucide-react";
+import { DEMO_VIDEO_URL, DOCTOR_CMD, INSTALL_CMD } from "@/lib/site-data";
 
 type Platform = "windows" | "macos" | "linux";
 
@@ -35,11 +37,22 @@ export default function InstallPage() {
   return (
     <div className="px-4 py-16">
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-3xl font-bold tracking-tight">Install Holocron</h1>
+        <p className="section-label mb-4">Install</p>
+        <h1 className="font-display text-4xl font-bold tracking-tight">Install Holocron</h1>
         <p className="mt-3 text-muted-foreground">
           Holocron runs locally via Docker. You only need Node.js (for the CLI) and Docker Desktop
           — no Python, Postgres, or manual setup.
         </p>
+
+        <a
+          href={DEMO_VIDEO_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+        >
+          <Play className="h-4 w-4" />
+          Watch the demo video first
+        </a>
 
         <div className="mt-8 flex gap-2">
           {PLATFORMS.map((p) => (
@@ -68,7 +81,8 @@ export default function InstallPage() {
                 <Download className="h-4 w-4" /> Install Node.js 20 LTS
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Required to run the <code className="rounded bg-muted px-1">holocron</code> CLI via npx.
+                Required to run the <code className="rounded bg-muted px-1">holocron</code> CLI via
+                npx.
               </p>
               <a
                 href="https://nodejs.org/en/download"
@@ -125,7 +139,7 @@ export default function InstallPage() {
               <h2 className="flex items-center gap-2 font-semibold">
                 <Terminal className="h-4 w-4" /> Verify prerequisites
               </h2>
-              <pre className="code-block mt-3">npx holocron-research@latest doctor</pre>
+              <pre className="code-block mt-3">{DOCTOR_CMD}</pre>
               <p className="mt-2 text-sm text-muted-foreground">
                 All checks should pass before starting.
               </p>
@@ -138,7 +152,7 @@ export default function InstallPage() {
             </span>
             <div>
               <h2 className="font-semibold">Start Holocron</h2>
-              <pre className="code-block mt-3">npx holocron-research@latest start</pre>
+              <pre className="code-block mt-3">{INSTALL_CMD}</pre>
               <p className="mt-2 text-sm text-muted-foreground">
                 First run runs the setup wizard, pulls ~2–4 GB of Docker images (5–10 min on slow
                 connections), and opens http://localhost:3000.
@@ -147,7 +161,7 @@ export default function InstallPage() {
           </li>
         </ol>
 
-        <div className="mt-12 rounded-lg border bg-muted/50 p-6">
+        <div className="mt-12 rounded-2xl border bg-muted/50 p-6">
           <h3 className="font-semibold">Troubleshooting</h3>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li className="flex gap-2">
@@ -164,6 +178,13 @@ export default function InstallPage() {
             </li>
           </ul>
         </div>
+
+        <p className="mt-8 text-sm text-muted-foreground">
+          Need the full feature overview?{" "}
+          <Link href="/features" className="text-primary hover:underline">
+            See features →
+          </Link>
+        </p>
       </div>
     </div>
   );

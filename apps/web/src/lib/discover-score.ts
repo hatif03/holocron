@@ -1,5 +1,5 @@
 /**
- * Lightweight title/keyword overlap scoring (Cite Smart embedding stand-in).
+ * Lightweight title/keyword overlap scoring for literature discovery ranking.
  */
 
 function tokenize(text: string): Set<string> {

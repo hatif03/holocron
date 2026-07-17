@@ -1,5 +1,7 @@
 # Holocron Demo Video Script
 
+**Published demo:** [YouTube — Holocron walkthrough](https://youtu.be/5Vnh6s4N_Z4)
+
 Technical checklist for recording. For the spoken voiceover, see **[DEMO_NARRATION.md](./DEMO_NARRATION.md)**.
 
 ## Prerequisites
@@ -18,7 +20,7 @@ Ensure K2 Think (or another LLM) is configured in **Settings** — mock mode pro
 
 1. Open **Research Graph** → select *Renewable Electricity Share and Fossil Fuel Dependence…*
 2. Sidebar **Memory** tab → search `energy transition` — show pre-seeded hits (intro draft, VLM note, graph summary)
-3. Note the warm **WhatsApp** green theme and **Instrument Serif** logo wordmark
+3. Note the Holocron green UI and **Instrument Serif** logo wordmark
 
 ## Act 2 — First paper generation
 

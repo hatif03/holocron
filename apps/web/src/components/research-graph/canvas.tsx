@@ -97,6 +97,13 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
     }
   }, [workId, setWorkId, pushHistory, initialGraph.nodes, initialGraph.edges, setNodes, fitView]);
 
+  const enqueueHistory = useCallback(
+    (nds: Node[], eds: Edge[]) => {
+      setTimeout(() => pushHistory({ nodes: nds, edges: eds }), 0);
+    },
+    [pushHistory]
+  );
+
   const scheduleHistory = useCallback(
     (nds: Node[], eds: Edge[]) => {
       if (historyTimer.current) clearTimeout(historyTimer.current);
@@ -109,15 +116,13 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
 
   const updateNodeDataFn = useCallback(
     (nodeId: string, patch: Record<string, unknown>) => {
-      setNodes((nds) => {
-        const next = nds.map((n) =>
-          n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n
-        );
-        scheduleHistory(next, edges);
-        return next;
-      });
+      const next = nodes.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n
+      );
+      setNodes(next);
+      scheduleHistory(next, edges);
     },
-    [setNodes, edges, scheduleHistory]
+    [setNodes, nodes, edges, scheduleHistory]
   );
 
   useEffect(() => {
@@ -141,21 +146,19 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => {
-        const next = addEdge(
-          {
-            ...connection,
-            id: uuidv4(),
-            type: "smoothstep",
-            style: { stroke: "#3b82f6", strokeWidth: 2 },
-          },
-          eds
-        );
-        pushHistory({ nodes, edges: next });
-        return next;
-      });
+      const next = addEdge(
+        {
+          ...connection,
+          id: uuidv4(),
+          type: "smoothstep",
+          style: { stroke: "#3b82f6", strokeWidth: 2 },
+        },
+        edges
+      );
+      setEdges(next);
+      enqueueHistory(nodes, next);
     },
-    [setEdges, nodes, pushHistory]
+    [setEdges, nodes, edges, enqueueHistory]
   );
 
   const addNode = (type: NodeType) => {
@@ -171,11 +174,9 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
         ...getDefaultNodeData(type),
       },
     };
-    setNodes((nds) => {
-      const next = [...nds, newNode];
-      pushHistory({ nodes: next, edges });
-      return next;
-    });
+    const next = [...nodes, newNode];
+    setNodes(next);
+    enqueueHistory(next, edges);
   };
 
   const selectNode = (nodeId: string) => {
@@ -184,13 +185,11 @@ function CanvasEditor({ workId, initialWork, initialGraph }: CanvasEditorProps) 
   };
 
   const handleSpreadNodes = useCallback(() => {
-    setNodes((nds) => {
-      const spread = spreadNodes(nds, edges);
-      pushHistory({ nodes: spread, edges });
-      return spread;
-    });
+    const spread = spreadNodes(nodes, edges);
+    setNodes(spread);
+    enqueueHistory(spread, edges);
     setTimeout(() => fitView({ duration: 300, padding: 0.3 }), 150);
-  }, [edges, setNodes, pushHistory, fitView]);
+  }, [nodes, edges, setNodes, enqueueHistory, fitView]);
 
   const save = async () => {
     setSaving(true);

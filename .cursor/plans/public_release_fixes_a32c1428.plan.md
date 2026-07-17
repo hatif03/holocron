@@ -13,10 +13,10 @@ todos:
     status: completed
   - id: verify-actions
     content: Fix CI lint if needed, confirm GitHub Actions green, optional v1.0.6 tag if code ships
-    status: in_progress
+    status: completed
   - id: docs-public
     content: Update DEMO.md, DEMO_NARRATION.md, README with final URLs and public install verification steps
-    status: in_progress
+    status: completed
 isProject: false
 ---
 

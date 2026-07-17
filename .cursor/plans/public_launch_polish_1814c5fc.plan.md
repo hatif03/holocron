@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: publish
     content: Bump CLI to v1.0.7, commit, tag, push to GitHub, verify npm publish and marketing deploy
-    status: in_progress
+    status: completed
 isProject: false
 ---
 

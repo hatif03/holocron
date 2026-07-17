@@ -1,12 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { screenshots } from "@/lib/site-data";
 
+const SLIDE_INTERVAL_MS = 4500;
+
 export function ScreenshotShowcase() {
   const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
   const current = screenshots[active]!;
+
+  const next = useCallback(() => {
+    setActive((i) => (i + 1) % screenshots.length);
+  }, []);
+
+  useEffect(() => {
+    if (paused) return;
+    const timer = setInterval(next, SLIDE_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [paused, next]);
 
   return (
     <section id="screenshots" className="grid-bg border-t px-4 py-20">
@@ -37,19 +50,44 @@ export function ScreenshotShowcase() {
           ))}
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-2xl border bg-card shadow-2xl">
-          <div className="border-b px-6 py-4">
-            <h3 className="font-semibold">{current.title}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{current.caption}</p>
+        <div
+          className="mt-8 overflow-hidden rounded-2xl border bg-card shadow-2xl"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocus={() => setPaused(true)}
+          onBlur={() => setPaused(false)}
+        >
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <div>
+              <h3 className="font-semibold">{current.title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{current.caption}</p>
+            </div>
+            <div className="hidden items-center gap-1.5 sm:flex" aria-hidden>
+              {screenshots.map((shot, i) => (
+                <span
+                  key={shot.id}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === active ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
+                  }`}
+                />
+              ))}
+            </div>
           </div>
-          <Image
-            src={current.src}
-            alt={current.title}
-            width={1920}
-            height={1080}
-            className="w-full"
-            priority={active === 0}
-          />
+          <div className="relative aspect-[16/10] w-full bg-muted/30">
+            {screenshots.map((shot, i) => (
+              <Image
+                key={shot.id}
+                src={shot.src}
+                alt={shot.title}
+                fill
+                className={`object-cover object-top transition-opacity duration-700 ${
+                  i === active ? "opacity-100" : "pointer-events-none opacity-0"
+                }`}
+                priority={i === 0}
+                sizes="(max-width: 1200px) 100vw, 1152px"
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>

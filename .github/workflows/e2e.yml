@@ -20,6 +20,9 @@ jobs:
       - run: npm ci
       - run: npm run build --workspace=@holocron/shared
 
+      - name: Create .env for Docker
+        run: cp .env.example .env
+
       - name: Start stack
         run: |
           docker compose -f docker/docker-compose.yml up -d postgres agents supermemory latex

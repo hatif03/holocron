@@ -98,7 +98,12 @@ jobs:
           holocron --version
           holocron doctor
           holocron install-guide | head -5
-          HOLOCRON_DATA=/tmp/holocron-ci HOLOCRON_IMAGE_TAG=$VERSION \
+          mkdir -p /tmp/holocron-ci
+          touch /tmp/holocron-ci/.env
+          HOLOCRON_DATA=/tmp/holocron-ci \
+          HOLOCRON_IMAGE_TAG=$VERSION \
+          HOLOCRON_MIGRATIONS_DIR=assets/migrations \
+          HOLOCRON_ENV_FILE=/tmp/holocron-ci/.env \
             docker compose -f assets/docker-compose.release.yml config --quiet
 
   test-marketing:

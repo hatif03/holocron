@@ -23,10 +23,10 @@ Marketing site: [holocron-tawny.vercel.app](https://holocron-tawny.vercel.app)
 
 ```bash
 # 1. Verify prerequisites (Node 20+, Docker running, ports free)
-npx holocron-research@1.0.7 doctor
+npx holocron-research@1.0.8 doctor
 
 # 2. First run — setup wizard + Docker images + browser
-npx holocron-research@1.0.7 start
+npx holocron-research@1.0.8 start
 ```
 
 First run:

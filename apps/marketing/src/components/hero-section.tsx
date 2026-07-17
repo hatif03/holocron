@@ -18,18 +18,22 @@ export function HeroSection() {
 
       <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
         <div>
-          <Image
-            src="/holocron-light.png"
-            alt="Holocron"
-            width={280}
-            height={80}
-            className="mb-8 h-auto w-56 brightness-0 invert md:w-64"
-            priority
-          />
-          <p className="section-label mb-6 border-white/20 bg-white/5 text-emerald-200">
+          <div className="mb-8 flex items-center gap-3">
+            <Image
+              src="/holocron.svg"
+              alt=""
+              width={48}
+              height={48}
+              className="h-12 w-12 shrink-0 opacity-90"
+            />
+            <span className="font-display text-4xl tracking-tight text-white md:text-5xl">
+              Holocron
+            </span>
+          </div>
+          <p className="section-label mb-6 border-emerald-400/30 bg-emerald-950/40 text-emerald-200">
             Source available · BYOK · Local-first
           </p>
-          <h1 className="font-display text-4xl leading-tight tracking-tight md:text-5xl lg:text-6xl">
+          <h1 className="font-display text-4xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
             Research graphs that write papers
           </h1>
           <p className="mt-6 max-w-lg text-lg text-emerald-100/80">
@@ -54,9 +58,7 @@ export function HeroSection() {
               Watch demo
             </a>
           </div>
-          <pre className="code-block mt-8 max-w-md border-white/10 bg-black/30 text-emerald-100">
-            {INSTALL_CMD}
-          </pre>
+          <pre className="hero-terminal mt-8 max-w-md">{INSTALL_CMD}</pre>
         </div>
 
         <div className="relative">

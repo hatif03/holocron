@@ -102,7 +102,7 @@ jobs:
           touch /tmp/holocron-ci/.env
           HOLOCRON_DATA=/tmp/holocron-ci \
           HOLOCRON_IMAGE_TAG=$VERSION \
-          HOLOCRON_MIGRATIONS_DIR=assets/migrations \
+          HOLOCRON_MIGRATIONS_DIR="$(pwd)/assets/migrations" \
           HOLOCRON_ENV_FILE=/tmp/holocron-ci/.env \
             docker compose -f assets/docker-compose.release.yml config --quiet
 
